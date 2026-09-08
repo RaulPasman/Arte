@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2B2823">
+<title>Duelo — descubrí tu gusto obra por obra</title>
+<style>
+:root{
+  --pared:#34302A; --pared-baja:#211F1B; --pared-alta:#3E3931;
+  --cartela:#EDE8DD; --cartela-2:#DED7C8;
+  --tinta:#1A1815; --tinta-2:#5A5348;
+  --tiza:#E7E2D7; --tiza-2:#A9A296;
+  --verde:#41604F; --verde-cl:#7CA189;
+  --ocre:#B79355;
+  --linea:rgba(231,226,215,.14);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua","URW Palladio L",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --sombra:0 1px 1px rgba(0,0,0,.55), 0 20px 38px -16px rgba(0,0,0,.75);
+}
+*{box-sizing:border-box}
+html{height:100%}
+body{
+  margin:0;min-height:100vh;min-height:100dvh;
+  background:radial-gradient(130% 90% at 50% -12%,var(--pared-alta),var(--pared) 55%,var(--pared-baja));
+  color:var(--tiza);font-family:var(--sans);
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+}
+img{display:block;max-width:100%}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--verde-cl);outline-offset:3px}
+.oculto{display:none !important}
+
+/* ---------- pantalla de juego a altura fija ---------- */
+body.jugando{height:100vh;height:100dvh;overflow:hidden}
+#juego{display:flex;flex-direction:column;height:100vh;height:100dvh;
+  padding:calc(env(safe-area-inset-top) + 8px) 12px calc(env(safe-area-inset-bottom) + 10px)}
+
+.top{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding-bottom:8px}
+.ronda{font-variant-numeric:tabular-nums;font-size:13px;color:var(--tiza-2);white-space:nowrap}
+.ronda b{color:var(--tiza);font-weight:500}
+.riel-prog{flex:1;height:2px;background:rgba(231,226,215,.14);position:relative;overflow:hidden}
+.riel-prog i{position:absolute;inset:0 auto 0 0;background:var(--ocre);width:0%}
+.top button{font-size:12.5px;color:var(--tiza-2);border:1px solid var(--linea);padding:4px 10px;border-radius:999px;white-space:nowrap}
+
+.duelo{flex:1;min-height:0;display:flex;gap:12px}
+.duelo.stack{flex-direction:column}
+.lado{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.lado>.pick{flex:1;min-height:0;display:flex;flex-direction:column;width:100%;padding:0;text-align:left}
+.marco{
+  flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.22);padding:6px;
+}
+.marco img{max-height:100%;max-width:100%;width:auto;object-fit:contain;box-shadow:var(--sombra);outline:1px solid rgba(0,0,0,.5)}
+.lado[data-sel="1"] .marco img{outline:2px solid var(--verde-cl);box-shadow:0 0 0 7px rgba(124,161,137,.16),var(--sombra)}
+.ficha{
+  flex:0 0 auto;background:var(--cartela);color:var(--tinta);
+  padding:8px 10px;margin-top:8px;min-height:44px;
+  box-shadow:0 8px 16px -12px rgba(0,0,0,.7);
+}
+.ficha .t{font-family:var(--serif);font-size:14.5px;line-height:1.2;margin:0}
+.ficha .m{font-size:11.5px;color:var(--tinta-2);margin:2px 0 0;font-variant-numeric:tabular-nums}
+.ficha .esperando{font-size:12px;color:#6B6459;font-style:italic}
+.corona{
+  position:absolute;top:6px;left:6px;z-index:2;
+  background:rgba(20,18,15,.82);color:var(--ocre);font-size:11px;
+  padding:3px 8px;border:1px solid rgba(183,147,85,.35);
+}
+.lado[data-sel="1"] .ficha{background:#DCE6DD;box-shadow:inset 4px 0 0 var(--verde),0 8px 16px -12px rgba(0,0,0,.7)}
+.lado[data-sel="1"] .ficha .t::before{content:"✓ ";color:var(--verde);font-weight:700}
+
+.abajo{flex:0 0 auto;padding-top:10px;display:flex;gap:10px;align-items:center}
+.seguir{
+  flex:1;background:var(--verde);color:#F3F0E9;padding:15px;font-size:16px;
+  border:1px solid var(--verde);letter-spacing:.01em;
+}
+.seguir:disabled{background:rgba(231,226,215,.06);color:var(--tiza-2);border-color:var(--linea);cursor:default}
+.pista{font-size:11.5px;color:var(--tiza-2);text-align:center;padding-top:6px;flex:0 0 100%}
+
+/* ---------- portada y resultados ---------- */
+.hoja{max-width:760px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 40px) 20px calc(env(safe-area-inset-bottom) + 60px)}
+.hoja h1{font-family:var(--serif);font-weight:400;font-size:clamp(30px,7vw,50px);line-height:1.05;margin:0 0 18px;max-width:20ch}
+.hoja h2{font-family:var(--serif);font-weight:400;font-size:23px;margin:38px 0 12px}
+.hoja p{font-size:15.5px;line-height:1.62;color:var(--tiza-2);max-width:60ch}
+.hoja p b{color:var(--tiza);font-weight:500}
+.pasos{list-style:none;padding:0;margin:22px 0 0;counter-reset:p}
+.pasos li{
+  counter-increment:p;position:relative;padding:0 0 14px 34px;font-size:14.5px;line-height:1.55;color:var(--tiza)
+}
+.pasos li::before{
+  content:counter(p);position:absolute;left:0;top:0;width:22px;height:22px;
+  border:1px solid var(--linea);display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:var(--ocre);font-variant-numeric:tabular-nums;
+}
+.largo{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 0}
+.largo button{border:1px solid var(--linea);padding:10px 16px;font-size:14px}
+.largo button[aria-pressed="true"]{background:var(--verde);border-color:var(--verde);color:#F3F0E9}
+.empezar{
+  margin-top:26px;background:var(--verde);border:1px solid var(--verde);color:#F3F0E9;
+  padding:15px 28px;font-size:16px;width:100%;max-width:340px;
+}
+.empezar:disabled{background:rgba(231,226,215,.06);border-color:var(--linea);color:var(--tiza-2)}
+.carga{font-size:13px;color:var(--tiza-2);border-left:2px solid var(--ocre);padding:2px 0 2px 11px;margin:22px 0 0;font-variant-numeric:tabular-nums}
+
+.podio{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:16px;margin:6px 0 0;align-items:start}
+.podio figure{margin:0}
+.podio .cuadro{height:152px;display:flex;align-items:flex-end;justify-content:center}
+.podio img{max-height:152px;width:auto;max-width:100%;box-shadow:var(--sombra);outline:1px solid rgba(0,0,0,.5)}
+.podio figcaption{font-size:12px;line-height:1.4;color:var(--tiza-2);margin-top:8px}
+.podio figcaption b{display:block;font-family:var(--serif);font-size:14px;color:var(--tiza);font-weight:400}
+
+.rank{margin:8px 0 0}
+.fila{display:grid;grid-template-columns:1fr 56px;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--linea)}
+.fila .n{font-size:14.5px}
+.fila .n small{display:block;color:var(--tiza-2);font-size:11.5px;margin-top:2px}
+.fila .v{text-align:right;font-variant-numeric:tabular-nums;font-size:14px;color:var(--ocre)}
+.fila .barra{grid-column:1/-1;height:3px;background:rgba(231,226,215,.1);margin-top:6px}
+.fila .barra i{display:block;height:100%;background:var(--verde-cl)}
+
+.bloque{background:var(--cartela);color:var(--tinta);padding:16px 18px;margin:14px 0}
+.bloque h3{font-family:var(--serif);font-weight:400;font-size:19px;margin:0 0 3px}
+.bloque .aa{font-size:12.5px;color:var(--tinta-2);margin:0 0 9px}
+.bloque p{font-size:13.6px;line-height:1.6;color:#403A31;max-width:none;margin:0}
+.acciones{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.acciones button{border:1px solid var(--linea);padding:11px 18px;font-size:14px}
+.acciones .pri{background:var(--verde);border-color:var(--verde);color:#F3F0E9}
+
+@media (min-width:760px){
+  .duelo{gap:20px}
+  #juego{padding-left:22px;padding-right:22px}
+  .ficha{padding:10px 13px}
+  .ficha .t{font-size:16px}
+  .duelo.stack .lado{max-width:760px;width:100%;margin:0 auto}
+  .seguir{max-width:420px;margin:0 auto}
+  .abajo{justify-content:center}
+}
+@media (prefers-reduced-motion:no-preference){
+  .fade{animation:f .28s ease both}
+  @keyframes f{from{opacity:0}to{opacity:1}}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= PORTADA ================= -->
+<section class="hoja" id="portada">
+  <h1>Dos cuadros. Elegís uno. Doscientas veces.</h1>
+  <p>El que elegís se queda en la pared y compite contra el siguiente. Vas comparando siempre contra tu favorito actual, así que al final lo que queda no es una opinión: es tu gusto, medido.</p>
+  <ol class="pasos">
+    <li>Los datos de cada obra están tapados hasta que elegís, para que decidas con el ojo y no con el nombre del artista.</li>
+    <li>Tocá la obra que preferís y después <b>Continuar</b>. En la computadora: flechas ← → y Enter.</li>
+    <li>Al terminar te armo el perfil: qué estilos aguantaron más rondas en tu pared, qué artistas elegiste y qué buscar para comprar.</li>
+  </ol>
+  <h2>¿Cuántas rondas?</h2>
+  <div class="largo" id="largo"></div>
+  <p class="carga" id="carga">Buscando obras…</p>
+  <button class="empezar" id="empezar" disabled>Empezar</button>
+  <p style="font-size:12.5px;margin-top:18px">Se guarda el avance en este dispositivo, podés cerrar y volver.</p>
+</section>
+
+<!-- ================= JUEGO ================= -->
+<section id="juego" class="oculto">
+  <div class="top">
+    <span class="ronda">Ronda <b id="rN">1</b> de <span id="rT">200</span></span>
+    <span class="riel-prog"><i id="prog"></i></span>
+    <button id="btnLayout" title="Cambiar disposición">⇅</button>
+    <button id="btnRes">Resultados</button>
+  </div>
+
+  <div class="duelo" id="duelo">
+    <div class="lado" id="ladoA" data-sel="0">
+      <span class="corona oculto" id="coronaA">en la pared · <b id="reinA">0</b></span>
+      <button class="pick" data-lado="A">
+        <div class="marco"><img id="imgA" alt=""></div>
+      </button>
+      <div class="ficha" id="fichaA"><p class="t esperando">Obra A</p></div>
+    </div>
+    <div class="lado" id="ladoB" data-sel="0">
+      <span class="corona oculto" id="coronaB">en la pared · <b id="reinB">0</b></span>
+      <button class="pick" data-lado="B">
+        <div class="marco"><img id="imgB" alt=""></div>
+      </button>
+      <div class="ficha" id="fichaB"><p class="t esperando">Obra B</p></div>
+    </div>
+  </div>
+
+  <div class="abajo">
+    <button class="seguir" id="seguir" disabled>Tocá la que te guste más</button>
+  </div>
+</section>
+
+<!-- ================= RESULTADOS ================= -->
+<section class="hoja oculto" id="resultados"></section>
+
+<script>
+/* Dataset: 49 estilos ("salas") y ~200 obras.
+   Cada obra trae `w` = título del artículo en Wikipedia (inglés) para resolver la imagen,
+   y `q` = consulta de respaldo si el título no existe. */
+const SALAS = [
+  {id:"renacimiento",n:"Renacimiento",a:"1400 – 1550",g:"Clásico",r:"Italia y Flandes",
+   lema:"Cuerpos sólidos, perspectiva matemática, calma.",
+   t:"El momento en que la pintura europea aprende a construir espacio con reglas: punto de fuga, anatomía, luz uniforme. Todo está ordenado y quieto, incluso las escenas violentas. Las paredes con estas obras se sienten serias y atemporales.",
+   rasgos:["Composición simétrica","Dibujo nítido","Temas mitológicos y religiosos"],
+   pal:["#8C7A5B","#3F5B6B","#B4433A","#E4D9C3"],
+   comprar:"Reproducciones grandes en papel mate con marco de madera oscura y passepartout amplio. Funciona en living o comedor, a la altura de los ojos, con luz cálida.",
+   art:["Botticelli","Leonardo","Rafael","Van Eyck"]},
+
+  {id:"barroco",n:"Barroco",a:"1600 – 1700",g:"Clásico",r:"Italia, España, Países Bajos",
+   lema:"Un foco de luz, el resto en penumbra.",
+   t:"Drama puro: contraste fuerte, diagonales, gestos captados a mitad de camino. El claroscuro convierte cualquier escena en teatro. Es el estilo que más 'peso' visual aporta a un ambiente.",
+   rasgos:["Claroscuro","Diagonales y movimiento","Fondos oscuros"],
+   pal:["#1B1410","#6E3A20","#C89B54","#EFE2C8"],
+   comprar:"Pedí impresión con buen negro (giclée sobre algodón). Marco ancho, oscuro o dorado envejecido. Ideal en paredes de color profundo y ambientes con poca luz natural.",
+   art:["Caravaggio","Rembrandt","Velázquez","Vermeer","Artemisia Gentileschi"]},
+
+  {id:"rococo",n:"Rococó",a:"1720 – 1780",g:"Clásico",r:"Francia",
+   lema:"Rosa, seda, jardines y frivolidad deliberada.",
+   t:"Después del Barroco todo se vuelve liviano: colores pastel, curvas, escenas de galanteo en jardines. Es decorativo sin disculparse. Muy usado hoy en dormitorios y ambientes claros.",
+   rasgos:["Pasteles","Curvas y asimetría","Escenas cortesanas"],
+   pal:["#EBC7CE","#BFD3C1","#E8DFC0","#8A6A93"],
+   comprar:"Formato mediano, marco claro o dorado fino. Se lleva bien con paredes blancas y textiles. Cuidado: en exceso se vuelve empalagoso, uno solo alcanza.",
+   art:["Fragonard","Watteau","Boucher","Élisabeth Vigée Le Brun"]},
+
+  {id:"neoclasicismo",n:"Neoclasicismo",a:"1760 – 1830",g:"Clásico",r:"Francia e Italia",
+   lema:"Orden, columnas y virtud republicana.",
+   t:"Reacción contra el Rococó: contornos duros, colores contenidos, temas de la Antigüedad como lección moral. Composiciones tan estables que casi parecen esculturas pintadas.",
+   rasgos:["Líneas frías","Poses escultóricas","Fondos arquitectónicos"],
+   pal:["#2C3446","#A8442F","#D8CDB6","#6E7A5E"],
+   comprar:"Funciona muy bien en pares o tríos simétricos sobre un sofá o una cabecera. Marco recto, negro o nogal.",
+   art:["Jacques-Louis David","Ingres","Canova"]},
+
+  {id:"romanticismo",n:"Romanticismo",a:"1790 – 1860",g:"Clásico",r:"Europa",
+   lema:"El paisaje es más grande que la persona.",
+   t:"La naturaleza como fuerza sublime: tormentas, mares, niebla, ruinas. La figura humana aparece chica y de espaldas. Es el antepasado directo del paisaje decorativo actual.",
+   rasgos:["Escala sublime","Cielos dramáticos","Figura de espaldas"],
+   pal:["#3A4B57","#7E6A4F","#D9C9A3","#1E2429"],
+   comprar:"Formato horizontal grande, sin marco o con marco fino, para que el paisaje respire. Excelente detrás del sofá o en un pasillo largo.",
+   art:["Turner","Friedrich","Delacroix","Géricault"]},
+
+  {id:"realismo",n:"Realismo",a:"1840 – 1880",g:"Clásico",r:"Francia",
+   lema:"Trabajo, campo y gente común, sin idealizar.",
+   t:"Se abandona el mito y aparece el presente: campesinos, obreros, entierros de pueblo, a la escala que antes se reservaba para reyes. Tonos tierra y una dignidad silenciosa.",
+   rasgos:["Paleta tierra","Escenas cotidianas","Luz gris y plana"],
+   pal:["#6B5B45","#8C8467","#3E3B33","#C9BFA6"],
+   comprar:"Se banca marcos rústicos y paredes en tonos arena o verde oliva. Muy bien en cocinas grandes y comedores diarios.",
+   art:["Millet","Courbet","Daumier"]},
+
+  {id:"prerrafaelismo",n:"Prerrafaelitas",a:"1848 – 1900",g:"Clásico",r:"Inglaterra",
+   lema:"Detalle obsesivo, pelo rojo y leyenda medieval.",
+   t:"Un grupo inglés decide volver al detalle previo a Rafael: cada hoja y cada pliegue pintados con precisión botánica, colores saturados y mujeres melancólicas de literatura artúrica.",
+   rasgos:["Verdes intensos","Detalle vegetal","Atmósfera literaria"],
+   pal:["#2F5E3E","#B5462F","#C8A44A","#E7DCC9"],
+   comprar:"Impresión de alta resolución (el detalle es el punto). Marco dorado fino, o negro para bajarle el tono romántico.",
+   art:["Millais","Rossetti","Burne-Jones","Waterhouse"]},
+
+  {id:"impresionismo",n:"Impresionismo",a:"1870 – 1890",g:"Moderno",r:"Francia",
+   lema:"Pincelada suelta, luz de un instante.",
+   t:"Salir del taller y pintar rápido, al aire libre: la forma se disuelve en manchas de color que el ojo recompone a distancia. Es el estilo más fácil de convivir: alegre, luminoso, nunca invasivo.",
+   rasgos:["Pincelada visible","Luz natural","Sombras de color, no negras"],
+   pal:["#9BB7D4","#E8C56A","#C48CA8","#7FA070"],
+   comprar:"Lo más seguro si no querés arriesgar. Mejor en tamaño mediano-grande y a cierta distancia del sillón: de cerca se ve solo la mancha.",
+   art:["Monet","Renoir","Degas","Berthe Morisot","Pissarro"]},
+
+  {id:"postimpresionismo",n:"Postimpresionismo",a:"1885 – 1905",g:"Moderno",r:"Francia",
+   lema:"El color como emoción, no como copia.",
+   t:"Cada uno tira para su lado: Van Gogh empasta y curva, Cézanne descompone en planos, Gauguin plancha el color en zonas planas. Es el puente entre pintar lo que se ve y pintar lo que se siente.",
+   rasgos:["Color arbitrario","Materia gruesa","Estructura geométrica"],
+   pal:["#1F3F6B","#E5A82E","#2E6F5E","#C1452F"],
+   comprar:"Buscá reproducciones con textura (canvas) para que se lea el empaste. Sostiene una pared sola, sin acompañamiento.",
+   art:["Van Gogh","Cézanne","Gauguin","Toulouse-Lautrec"]},
+
+  {id:"puntillismo",n:"Puntillismo",a:"1884 – 1900",g:"Moderno",r:"Francia",
+   lema:"Miles de puntos que el ojo mezcla.",
+   t:"Ciencia del color aplicada con paciencia de monje: puntos puros uno al lado del otro, sin mezclar en la paleta. De lejos vibra; de cerca es una grilla. Muy afín a quien le gustan los sistemas.",
+   rasgos:["Puntos separados","Colores complementarios","Escenas de ocio"],
+   pal:["#3E6E9C","#E2B33C","#B4553F","#5E8C5A"],
+   comprar:"Necesita tamaño: en chico el efecto se pierde. Pared amplia y luz buena.",
+   art:["Seurat","Signac","Cross"]},
+
+  {id:"simbolismo",n:"Simbolismo",a:"1880 – 1910",g:"Moderno",r:"Europa",
+   lema:"Sueños, mitos y una inquietud elegante.",
+   t:"En contra del realismo: imágenes enigmáticas, figuras suspendidas, atmósferas de trance. No cuenta una historia clara, propone un estado de ánimo. Puede ser hipnótico o demasiado denso según el ambiente.",
+   rasgos:["Atmósfera onírica","Figuras hieráticas","Oro y sombra"],
+   pal:["#2B3A4A","#8C7233","#6C3A4E","#D8CFC0"],
+   comprar:"Uno solo, bien iluminado, como pieza central. Evitá el dormitorio si las imágenes son inquietantes.",
+   art:["Redon","Böcklin","Moreau","Klimt"]},
+
+  {id:"art_nouveau",n:"Art Nouveau",a:"1890 – 1910",g:"Moderno",r:"Francia y Austria",
+   lema:"Línea curva, oro y ornamento vegetal.",
+   t:"La frontera entre arte y diseño se borra: afiches, vitrales y pinturas comparten la misma línea sinuosa tomada de plantas y cabello. Decorativo en el mejor sentido, y muy fotogénico.",
+   rasgos:["Línea orgánica","Patrones planos","Pan de oro"],
+   pal:["#C8A24A","#3F6B63","#B8556A","#EFE6D2"],
+   comprar:"Los afiches originales de época se reproducen muy bien y son baratos. Marco fino dorado o negro; ideal en entrada o pasillo.",
+   art:["Klimt","Mucha","Toorop"]},
+
+  {id:"fauvismo",n:"Fauvismo",a:"1905 – 1910",g:"Moderno",r:"Francia",
+   lema:"Color saturado sin pedir permiso.",
+   t:"Cielos rojos, caras verdes, sombras naranjas: el color se libera de la descripción y se usa por su intensidad. Duró poco pero es el estilo que más energía inyecta a un ambiente neutro.",
+   rasgos:["Color puro y plano","Dibujo simplificado","Alegría agresiva"],
+   pal:["#D8341F","#1E7A8C","#F0B429","#2E8B57"],
+   comprar:"Perfecto para paredes blancas y ambientes con muebles neutros. Sin marco o con marco blanco fino, para no competir.",
+   art:["Matisse","Derain","Vlaminck"]},
+
+  {id:"expresionismo",n:"Expresionismo",a:"1905 – 1930",g:"Moderno",r:"Alemania y norte de Europa",
+   lema:"Deformar para que se sienta.",
+   t:"El mundo visto a través de un nervio: figuras estiradas, colores ácidos, ciudades que aprietan. Es incómodo a propósito, y por eso mismo memorable. No es un estilo de fondo.",
+   rasgos:["Distorsión","Trazo brusco","Angustia urbana"],
+   pal:["#1E2A44","#C4342A","#E3A93B","#4B6E4E"],
+   comprar:"Elegí una sola pieza y dale espacio en blanco alrededor. Estudio, biblioteca o escritorio antes que dormitorio.",
+   art:["Munch","Kirchner","Franz Marc","Schiele","Kokoschka"]},
+
+  {id:"cubismo",n:"Cubismo",a:"1907 – 1925",g:"Moderno",r:"Francia y España",
+   lema:"Todos los ángulos al mismo tiempo.",
+   t:"La ruptura más radical del siglo XX: el objeto se desarma en planos y se vuelve a montar en un mismo plano, sin un punto de vista único. Es analítico, casi de ingeniería.",
+   rasgos:["Planos facetados","Paleta ocre y gris","Objeto descompuesto"],
+   pal:["#8C7B5A","#4A4F55","#B8A98C","#2B2B2B"],
+   comprar:"Se lleva muy bien con decoración moderna y muebles de línea recta. Marco recto negro o aluminio.",
+   art:["Picasso","Braque","Juan Gris","Léger"]},
+
+  {id:"futurismo",n:"Futurismo",a:"1909 – 1918",g:"Moderno",r:"Italia",
+   lema:"Velocidad, máquinas y líneas de fuerza.",
+   t:"El culto a la modernidad: autos, multitudes, movimiento repetido en abanicos de líneas. Es cubismo puesto a correr, con vocación de manifiesto.",
+   rasgos:["Repetición de formas","Diagonales de velocidad","Temas industriales"],
+   pal:["#B5372A","#2F3E52","#D9A03C","#7E8B95"],
+   comprar:"Buen fit para lofts, oficinas y espacios de trabajo. Formato apaisado y marco mínimo.",
+   art:["Balla","Boccioni","Severini"]},
+
+  {id:"dada",n:"Dadá",a:"1916 – 1924",g:"Moderno",r:"Zúrich, Berlín, Nueva York",
+   lema:"Sabotaje, collage y humor negro.",
+   t:"Después de la Primera Guerra, un grupo decide que el arte serio ya no alcanza: recortes de diario, objetos comunes, azar y burla. Más conceptual que decorativo, pero muy vivo en una pared.",
+   rasgos:["Collage","Tipografía recortada","Ironía"],
+   pal:["#2A2A28","#C0392B","#D9CBB0","#5D6D7E"],
+   comprar:"Ideal en formato chico y agrupado en varias piezas (galería de pared). Marco negro fino con vidrio.",
+   art:["Hannah Höch","Duchamp","Man Ray"]},
+
+  {id:"surrealismo",n:"Surrealismo",a:"1924 – 1950",g:"Moderno",r:"Francia, España, México",
+   lema:"Imágenes imposibles pintadas con precisión.",
+   t:"Objetos cotidianos en situaciones de sueño, ejecutados con nitidez fotográfica para que la contradicción moleste más. Es el estilo que más conversación genera en una casa.",
+   rasgos:["Yuxtaposición absurda","Espacios vacíos","Terminación pulida"],
+   pal:["#4A7EA8","#C9A66B","#8C4A3F","#E8E2D4"],
+   comprar:"Una pieza fuerte alcanza. Muy bien en entrada, escritorio o baño de invitados (donde sorprende).",
+   art:["Dalí","Magritte","Miró","Frida Kahlo","Remedios Varo"]},
+
+  {id:"metafisica",n:"Pintura metafísica",a:"1911 – 1925",g:"Moderno",r:"Italia",
+   lema:"Plazas vacías, sombras largas, nadie.",
+   t:"Ciudades desiertas al atardecer, arcadas, maniquíes y estatuas: el silencio como tema. Antecede al surrealismo y es notablemente elegante y calmo pese a la inquietud.",
+   rasgos:["Sombras alargadas","Arquitectura vacía","Luz de siesta"],
+   pal:["#C89A54","#3E5A6B","#8A3A2E","#E0D6C2"],
+   comprar:"Excelente en pasillos y espacios de paso, donde la perspectiva vacía funciona. Marco fino claro.",
+   art:["De Chirico","Carrà","Morandi"]},
+
+  {id:"neoplasticismo",n:"Neoplasticismo · De Stijl",a:"1917 – 1931",g:"Moderno",r:"Países Bajos",
+   lema:"Solo rectas, negro y tres primarios.",
+   t:"Reducción total: líneas horizontales y verticales, rojo, amarillo, azul, blanco y negro. Nada de curvas ni diagonales. Es diseño gráfico antes del diseño gráfico, y no envejece.",
+   rasgos:["Grilla ortogonal","Primarios puros","Cero representación"],
+   pal:["#D62828","#F5C518","#1D4E9C","#F2F2F0"],
+   comprar:"Funciona en tríos y en espacios chicos. Marco blanco o sin marco, montado a bastidor.",
+   art:["Mondrian","Van Doesburg","Rietveld"]},
+
+  {id:"suprematismo",n:"Suprematismo y constructivismo",a:"1915 – 1935",g:"Moderno",r:"Rusia",
+   lema:"Formas puras flotando en blanco.",
+   t:"Cuadrados, círculos y barras diagonales sin ningún referente en el mundo. La rama constructivista lo lleva al afiche y a la propaganda, con rojo, negro y diagonales cortantes.",
+   rasgos:["Geometría flotante","Rojo y negro","Diagonal como energía"],
+   pal:["#C02A1E","#111111","#E9E4D8","#3C6E9F"],
+   comprar:"Los afiches constructivistas quedan muy bien en oficina o estudio. Formato vertical, marco negro.",
+   art:["Malévich","Rodchenko","Lissitzky","Popova"]},
+
+  {id:"bauhaus",n:"Abstracción Bauhaus",a:"1920 – 1935",g:"Moderno",r:"Alemania",
+   lema:"Geometría con oído musical.",
+   t:"En la escuela Bauhaus la abstracción se vuelve un lenguaje enseñable: círculos, triángulos y color con reglas casi de solfeo. Kandinsky y Klee son opuestos y complementarios: uno ordena, el otro juega.",
+   rasgos:["Formas básicas","Ritmo y música","Color estudiado"],
+   pal:["#E4B429","#B03A2E","#2C6E9B","#EFEAE0"],
+   comprar:"La opción más versátil de la abstracción: entra en cualquier ambiente. Series de dos o tres, marco fino de madera clara.",
+   art:["Kandinsky","Paul Klee","Josef Albers","Anni Albers"]},
+
+  {id:"art_deco",n:"Art Déco",a:"1920 – 1939",g:"Moderno",r:"Francia y EE.UU.",
+   lema:"Lujo geométrico y velocidad.",
+   t:"Estilizado, simétrico, metálico: rascacielos, autos, mujeres de perfil afilado. Es el estilo más 'diseño de interiores' de la lista y el que más rápido cambia el carácter de un ambiente.",
+   rasgos:["Simetría y escalonado","Cromo y laca","Figuras estilizadas"],
+   pal:["#0E2A33","#C8A24A","#B23A48","#E8E6E1"],
+   comprar:"Marco negro con filete dorado, o metálico. Ideal en bar, comedor o baño principal. Se lleva bien con espejos.",
+   art:["Tamara de Lempicka","Erté","Cassandre"]},
+
+  {id:"realismo_americano",n:"Realismo americano",a:"1925 – 1960",g:"Moderno",r:"Estados Unidos",
+   lema:"Soledad en bares, rutas y ventanas.",
+   t:"Escenas urbanas y rurales con luz cortante y personas que no se miran. Composiciones muy limpias, casi arquitectónicas, y una melancolía sobria que envejece muy bien.",
+   rasgos:["Luz dura","Geometría urbana","Soledad contenida"],
+   pal:["#2E4A5C","#C9853F","#D9CBB2","#7A9A6B"],
+   comprar:"Formato apaisado, marco fino oscuro. Excelente en living o home office; conviene una sola pieza grande.",
+   art:["Edward Hopper","Georgia O'Keeffe","Grant Wood","Andrew Wyeth"]},
+
+  {id:"muralismo",n:"Muralismo mexicano",a:"1920 – 1960",g:"Moderno",r:"México",
+   lema:"Historia y política a escala de pared.",
+   t:"Arte público con vocación pedagógica: multitudes, trabajo, conquista y revolución en composiciones enormes y densas. Colores tierra y rojos fuertes, dibujo monumental.",
+   rasgos:["Multitudes","Figuras monumentales","Contenido político"],
+   pal:["#8C3B2E","#C08A3E","#3E5B4A","#E0D2B8"],
+   comprar:"Reproducciones de fragmentos funcionan mejor que el mural completo. Formato grande, marco simple de madera.",
+   art:["Diego Rivera","Siqueiros","Orozco"]},
+
+  {id:"expr_abstracto",n:"Expresionismo abstracto",a:"1945 – 1960",g:"Contemporáneo",r:"Nueva York",
+   lema:"El gesto del brazo entero.",
+   t:"Cuadros grandes hechos con el cuerpo: chorreado, barrido, capas. No hay imagen, hay energía registrada. Pide escala y distancia; en chico se ve como un accidente.",
+   rasgos:["Gesto y chorreado","Formato grande","Sin figura"],
+   pal:["#2B2723","#B8873F","#8C3A2E","#DAD3C6"],
+   comprar:"Cuanto más grande, mejor. Montado a bastidor sin marco. La opción más segura para paredes vacías de doble altura.",
+   art:["Pollock","De Kooning","Franz Kline","Motherwell","Lee Krasner"]},
+
+  {id:"color_field",n:"Campos de color",a:"1950 – 1970",g:"Contemporáneo",r:"Estados Unidos",
+   lema:"Grandes planos de color que zumban.",
+   t:"Se elimina el gesto y queda el color: rectángulos flotantes de bordes difusos, o telas manchadas por absorción. Efecto casi meditativo. Es abstracción para gente que quiere calma, no ruido.",
+   rasgos:["Planos amplios","Bordes difusos","Efecto contemplativo"],
+   pal:["#8C2F39","#D9752B","#2E4B6B","#E6DED0"],
+   comprar:"La mejor abstracción para dormitorio. Formato vertical grande, sin marco, y luz indirecta.",
+   art:["Rothko","Barnett Newman","Helen Frankenthaler","Clyfford Still"]},
+
+  {id:"op_art",n:"Op art",a:"1960 – 1975",g:"Contemporáneo",r:"Inglaterra, Hungría, Francia",
+   lema:"Ilusiones ópticas en blanco y negro.",
+   t:"Patrones calculados que hacen vibrar, ondular o pulsar la superficie. Es matemática visual pura, y de todos los estilos el que más 'trabaja' sobre el ojo del que mira.",
+   rasgos:["Repetición precisa","Blanco y negro","Vibración óptica"],
+   pal:["#111111","#F5F5F2","#C0392B","#2C6E9B"],
+   comprar:"Impresión de altísima calidad (cualquier error se ve). Marco blanco fino. Cuidado en dormitorios: cansa la vista.",
+   art:["Bridget Riley","Victor Vasarely","Anni Albers"]},
+
+  {id:"pop_art",n:"Pop art",a:"1955 – 1975",g:"Contemporáneo",r:"EE.UU. e Inglaterra",
+   lema:"Publicidad, historieta y color plano.",
+   t:"Toma las imágenes de la góndola y la revista y las agranda sin ironía visible. Bordes duros, colores de imprenta, puntos de trama. Es alegre, directo y muy fácil de combinar.",
+   rasgos:["Color plano de imprenta","Iconos de consumo","Trama de puntos"],
+   pal:["#E63946","#F4D03F","#1D4E9C","#F7F5F0"],
+   comprar:"Serigrafías o prints; queda muy bien en grupos de cuatro. Marco blanco o acrílico. Cocina, playroom, bar.",
+   art:["Warhol","Lichtenstein","Hamilton","Hockney"]},
+
+  {id:"minimalismo",n:"Minimalismo",a:"1960 – 1980",g:"Contemporáneo",r:"Estados Unidos",
+   lema:"Lo menos posible, hecho perfecto.",
+   t:"Sin gesto, sin símbolo, sin narrativa: franjas, grillas, monocromos. El interés está en la proporción y el material. Requiere una casa ordenada; en un ambiente cargado desaparece.",
+   rasgos:["Repetición sistemática","Superficie impecable","Neutros"],
+   pal:["#EFEDE8","#9A958C","#2A2A28","#C8C2B4"],
+   comprar:"Ideal para departamentos modernos y paredes claras. Montaje a bastidor, sin marco, con separación generosa entre piezas.",
+   art:["Agnes Martin","Frank Stella","Ellsworth Kelly","Robert Ryman"]},
+
+  {id:"cinetico",n:"Arte cinético latinoamericano",a:"1955 – 1980",g:"Contemporáneo",r:"Venezuela, Argentina, Brasil",
+   lema:"Color que cambia cuando te movés.",
+   t:"Una tradición fuerte y muy propia de la región: líneas y planos calculados para que la imagen se transforme según dónde estés parado. Cruz-Diez, Soto y Le Parc lo llevaron a escala urbana.",
+   rasgos:["Franjas verticales","Color que interfiere","Participación del espectador"],
+   pal:["#E23E2C","#F2B01E","#1E6FB8","#1B1B1B"],
+   comprar:"Es lo más interesante para comprar en Buenos Aires: hay mercado local y obra sobre papel accesible. Necesita luz frontal parejo.",
+   art:["Carlos Cruz-Diez","Jesús Rafael Soto","Julio Le Parc","Lygia Clark"]},
+
+  {id:"concreto_madi",n:"Arte concreto y Madí",a:"1944 – 1960",g:"Contemporáneo",r:"Argentina y Uruguay",
+   lema:"Geometría rioplatense, marcos recortados.",
+   t:"En Buenos Aires y Montevideo la abstracción tomó forma propia: obras que rompen el marco rectangular, planos de color puros y un espíritu de manifiesto. Es patrimonio local y muy coleccionable.",
+   rasgos:["Marco irregular","Planos puros","Rigor constructivo"],
+   pal:["#D93A2B","#F2C230","#1F6E8C","#EDE7DA"],
+   comprar:"Buscá serigrafías y obra sobre papel de los años 50-60 en casas de subasta locales. Marco blanco al ras.",
+   art:["Tomás Maldonado","Gyula Kosice","Raúl Lozza","Joaquín Torres-García","Lidy Prati"]},
+
+  {id:"arg_moderno",n:"Modernos argentinos",a:"1920 – 1980",g:"Contemporáneo",r:"Argentina",
+   lema:"Puerto, barrio, mito y collage.",
+   t:"Del Riachuelo de Quinquela a los Juanito Laguna hechos con basura de Berni, pasando por el universo astral de Xul Solar. Es el conjunto con más sentido para una pared en Buenos Aires.",
+   rasgos:["Color local","Materiales encontrados","Iconografía porteña"],
+   pal:["#D1622A","#2E5E7A","#E8C15A","#3F4A3A"],
+   comprar:"Mercado local activo: galerías de Retiro y Villa Crespo, más remates. Pedí siempre certificado de autenticidad.",
+   art:["Antonio Berni","Xul Solar","Quinquela Martín","Emilio Pettoruti","Raquel Forner"]},
+
+  {id:"hiperrealismo",n:"Hiperrealismo",a:"1968 – hoy",g:"Contemporáneo",r:"Estados Unidos",
+   lema:"Más nítido que una foto.",
+   t:"Pintura hecha para que no parezca pintada: reflejos de vidrieras, retratos gigantes construidos con grilla, superficies de metal. El asombro técnico es parte de la obra.",
+   rasgos:["Detalle extremo","Reflejos y vidrios","Escala inesperada"],
+   pal:["#4A5C6B","#C9B48C","#8C2F2F","#EFEFEC"],
+   comprar:"Exige impresión y luz de primer nivel. Funciona en un solo muro protagonista; no lo mezcles con nada más.",
+   art:["Chuck Close","Richard Estes","Audrey Flack"]},
+
+  {id:"ukiyoe",n:"Ukiyo-e japonés",a:"1760 – 1860",g:"Tradiciones",r:"Japón",
+   lema:"Grabado en madera: línea, plano y ola.",
+   t:"Estampas populares de Edo: paisajes, actores, cortesanas, todo con contorno negro y color plano en capas. Influyó de lleno en el impresionismo y sigue siendo insuperable como decoración.",
+   rasgos:["Contorno de madera","Color plano","Composición descentrada"],
+   pal:["#1F4E79","#E8D8B0","#C1452F","#4A6B4A"],
+   comprar:"Reproducciones buenas son baratísimas, y hay estampas originales tardías accesibles. Passepartout crema, marco negro o cerezo, formato vertical u horizontal estándar.",
+   art:["Hokusai","Hiroshige","Utamaro","Sharaku"]},
+
+  {id:"tinta_china",n:"Tinta china y paisaje literato",a:"960 – 1700",g:"Tradiciones",r:"China y Corea",
+   lema:"Montañas, niebla y mucho vacío.",
+   t:"Pintura de pincel y tinta sobre seda o papel, donde lo que no está pintado importa tanto como lo pintado. Escala monumental de la naturaleza y una quietud absoluta.",
+   rasgos:["Monocromo","Espacio vacío","Pincelada caligráfica"],
+   pal:["#2B2B29","#8C8577","#D8D2C4","#5F6F63"],
+   comprar:"Formato vertical largo (rollo) o panel. Marco de madera clara, sin vidrio brillante. Perfecto para ambientes de descanso.",
+   art:["Fan Kuan","Guo Xi","Muqi","Shen Zhou"]},
+
+  {id:"miniatura_persa",n:"Miniatura persa e india",a:"1300 – 1800",g:"Tradiciones",r:"Persia e India mogol",
+   lema:"Color joya, oro y perspectiva imposible.",
+   t:"Ilustraciones de manuscritos: jardines vistos desde arriba, patrones textiles, figuras superpuestas sin sombras. Densidad decorativa altísima en formatos chicos.",
+   rasgos:["Detalle miniaturista","Oro y lapislázuli","Sin perspectiva única"],
+   pal:["#1F4E8C","#C9A227","#8C2F39","#3E6B4A"],
+   comprar:"Formato chico agrupado en serie de tres o cuatro. Passepartout amplio, marco fino oscuro.",
+   art:["Behzad","Basawan","Mir Sayyid Ali"]},
+
+  {id:"geometria_islamica",n:"Geometría islámica",a:"800 – 1700",g:"Tradiciones",r:"Mundo islámico",
+   lema:"Patrón infinito sin figura humana.",
+   t:"Sistemas geométricos de estrellas, lazos y mosaicos que se pueden repetir para siempre. Es matemática hecha ornamento, y funciona perfecto como fondo tranquilo.",
+   rasgos:["Simetría rotacional","Repetición modular","Sin figuración"],
+   pal:["#1E6E7A","#C9A227","#8C3B2E","#EFE8D8"],
+   comprar:"Ideal en paneles cuadrados o en trío. También en cerámica y azulejo enmarcado, que suma textura.",
+   art:["Talleres de Isfahán","Zellij marroquí","Girih"]},
+
+  {id:"iconos",n:"Iconos bizantinos",a:"500 – 1600",g:"Tradiciones",r:"Bizancio y Rusia",
+   lema:"Fondo de oro, mirada frontal, tiempo detenido.",
+   t:"Imágenes religiosas pintadas según reglas estrictas durante mil años: sin sombras, sin profundidad, con oro como luz. Tienen una presencia grave que ningún otro estilo logra.",
+   rasgos:["Fondo dorado","Frontalidad","Paleta terrosa y roja"],
+   pal:["#B8873F","#7A2E2E","#2E4A4A","#E4D5B8"],
+   comprar:"Tabla o impresión sobre madera antes que papel. Formato chico y vertical, solo o en dupla.",
+   art:["Andréi Rubliov","Teófanes el Griego","Escuela de Nóvgorod"]},
+
+  {id:"botanica",n:"Ilustración natural",a:"1700 – 1900",g:"Ilustración",r:"Europa y EE.UU.",
+   lema:"Plantas, aves e insectos con precisión científica.",
+   t:"Láminas hechas para describir especies, que resultaron ser hermosas: rosas, aves a escala real, medusas. Es el recurso más confiable de la decoración: nunca choca con nada.",
+   rasgos:["Fondo neutro","Detalle científico","Series repetibles"],
+   pal:["#3E6B4A","#C9A227","#B85C4A","#F0EADA"],
+   comprar:"Comprar en serie de cuatro o seis, mismo marco, misma separación. Passepartout blanco generoso, marco negro o dorado fino. Baño, pasillo, cocina.",
+   art:["Redouté","Audubon","Maria Sibylla Merian","Ernst Haeckel"]},
+
+  {id:"cartografia",n:"Cartografía antigua",a:"1400 – 1800",g:"Ilustración",r:"Europa",
+   lema:"Mapas con monstruos y rosas de los vientos.",
+   t:"Mapas grabados y coloreados a mano, con caligrafía, escudos y criaturas marinas en los márgenes. Mezcla de dato y fantasía. Muy buen tema para quien le gusta la historia.",
+   rasgos:["Sepia y aguadas","Caligrafía","Ornamento en los bordes"],
+   pal:["#8C6F4A","#3E5B6B","#C9B48C","#E8DCC2"],
+   comprar:"Formato grande apaisado, marco de madera oscura con passepartout crema. Un mapa antiguo de Buenos Aires o del Río de la Plata es una gran pieza local.",
+   art:["Ortelius","Blaeu","Mercator"]},
+
+  {id:"fotografia",n:"Fotografía en blanco y negro",a:"1900 – hoy",g:"Ilustración",r:"Global",
+   lema:"Grano, luz y un instante real.",
+   t:"Paisajes de altísimo contraste, retratos documentales, calles. Al no tener color, se integra con cualquier paleta y baja el ruido visual de un ambiente cargado.",
+   rasgos:["Escala de grises","Composición precisa","Registro documental"],
+   pal:["#151515","#5C5C5C","#A8A8A8","#F2F2F0"],
+   comprar:"Papel baritado o fibra, marco negro o blanco fino con vidrio antirreflejo. Excelente en series de tres en pasillo.",
+   art:["Ansel Adams","Cartier-Bresson","Dorothea Lange","Sebastião Salgado"]},
+
+  {id:"naif",n:"Arte naíf",a:"1880 – hoy",g:"Contemporáneo",r:"Global",
+   lema:"Selvas planas y una inocencia calculada.",
+   t:"Pintores sin formación académica (o que la simulan): perspectiva ingenua, detalle parejo, mundos de fantasía luminosa. Es cálido y sin pretensión, muy amigable en casas con chicos.",
+   rasgos:["Perspectiva plana","Detalle uniforme","Color saturado"],
+   pal:["#2E6B4A","#E2A63B","#B8452F","#EFE3C8"],
+   comprar:"Formato mediano, marco de madera clara. Living familiar, cuarto de juegos, comedor diario.",
+   art:["Henri Rousseau","Grandma Moses","Séraphine Louis"]},
+
+  {id:"street_art",n:"Arte urbano",a:"1980 – hoy",g:"Contemporáneo",r:"Nueva York, Londres, Buenos Aires",
+   lema:"Stencil, aerosol y mensaje directo.",
+   t:"Nace en la calle y llega a la pared de casa: plantillas, letras, figuras crudas y crítica social inmediata. Es el estilo más contemporáneo y el que más rápido fecha un ambiente.",
+   rasgos:["Stencil y aerosol","Texto integrado","Crudeza intencional"],
+   pal:["#1B1B1B","#E23E2C","#F2F2F0","#F2B01E"],
+   comprar:"Buenos Aires tiene una escena muy fuerte: comprá directo a artistas o en ferias. Prints firmados y numerados, marco negro al ras.",
+   art:["Basquiat","Keith Haring","Banksy","Blu"]},
+
+  {id:"abstraccion_contemp",n:"Abstracción contemporánea",a:"1970 – hoy",g:"Contemporáneo",r:"Global",
+   lema:"Capas, borrones y superficie.",
+   t:"La abstracción actual: veladuras, arrastres con espátula, borrado como técnica. No busca significado, busca superficie interesante. Es lo que más se vende hoy en decoración de alta gama.",
+   rasgos:["Capas translúcidas","Arrastre y borrado","Paleta apagada"],
+   pal:["#8C9A9E","#B8A48C","#3E4A52","#E4DED2"],
+   comprar:"Es donde más conviene comprar artistas jóvenes: precio accesible y obra grande. Bastidor profundo sin marco.",
+   art:["Gerhard Richter","Joan Mitchell","Cy Twombly","Julie Mehretu"]},
+
+  {id:"paisaje_americano",n:"Paisaje épico americano",a:"1825 – 1880",g:"Clásico",r:"Estados Unidos",
+   lema:"Cordilleras, luz dorada y horizonte enorme.",
+   t:"Paisajes de escala continental pintados como promesa: cañones, cataratas, Andes, con una luz que parece revelación. Es romanticismo pasado por el entusiasmo del Nuevo Mundo.",
+   rasgos:["Panorámica extrema","Luz dorada","Detalle geológico"],
+   pal:["#C89A54","#3E5B4A","#8CA8C4","#E8DCC2"],
+   comprar:"Muy apaisado, cuanto más ancho mejor, sobre un mueble bajo o la cabecera. Marco dorado clásico o madera oscura.",
+   art:["Albert Bierstadt","Frederic Edwin Church","Thomas Cole"]},
+
+  {id:"bodegon",n:"Bodegón",a:"1600 – hoy",g:"Clásico",r:"Europa",
+   lema:"Fruta, vidrio, tela y el paso del tiempo.",
+   t:"El género más doméstico: objetos ordenados sobre una mesa, pintados para lucir la habilidad y, muchas veces, para recordar que todo se marchita. Es el cuadro de comedor por definición.",
+   rasgos:["Luz lateral","Objetos cotidianos","Simbolismo de la fugacidad"],
+   pal:["#3A2E24","#8C6F3E","#B8452F","#D8CBAE"],
+   comprar:"Comedor y cocina, a la altura de la mesa. Marco de madera con moldura, y luz cálida puntual.",
+   art:["Caravaggio","Chardin","Cézanne","Giorgio Morandi"]},
+
+  {id:"shin_hanga",n:"Shin-hanga japonés",a:"1915 – 1960",g:"Tradiciones",r:"Japón",
+   lema:"Ukiyo-e con atmósfera y luz moderna.",
+   t:"Renovación del grabado japonés en el siglo XX: los mismos oficios de madera, pero con lluvia, nieve, faroles y una sensibilidad casi fotográfica de la luz. Sereno y elegante.",
+   rasgos:["Escenas de lluvia y nieve","Azules profundos","Luz nocturna"],
+   pal:["#1F3F6B","#4A6B7A","#D8CBAE","#8C3B2E"],
+   comprar:"Se encuentran estampas originales a precios razonables. Serie de dos o tres, marco de madera clara, passepartout crema.",
+   art:["Kawase Hasui","Hiroshi Yoshida","Ohara Koson"]},
+
+  {id:"generativo",n:"Arte generativo y digital",a:"1965 – hoy",g:"Contemporáneo",r:"Global",
+   lema:"El algoritmo dibuja, el artista escribe la regla.",
+   t:"Obras hechas con código: variaciones sistemáticas, ruido controlado, series infinitas. Empezó con plotters en los 60 y hoy incluye impresión de gran formato y pantalla. El estilo más afín a una mente cuantitativa.",
+   rasgos:["Series algorítmicas","Trazo de plotter","Variación controlada"],
+   pal:["#111111","#E8E4DB","#C02A1E","#2C6E9B"],
+   comprar:"Prints de plotter firmados o ediciones digitales impresas en gran formato. Marco blanco al ras, pared despejada. Muy buen fit para un escritorio de trabajo.",
+   art:["Vera Molnár","Manfred Mohr","Casey Reas","Refik Anadol"]}
+];
+
+const OBRAS = [
+  // Renacimiento
+  {t:"El nacimiento de Venus",ar:"Sandro Botticelli",y:1486,s:"renacimiento",w:"The Birth of Venus"},
+  {t:"La Gioconda",ar:"Leonardo da Vinci",y:1503,s:"renacimiento",w:"Mona Lisa"},
+  {t:"La escuela de Atenas",ar:"Rafael",y:1511,s:"renacimiento",w:"The School of Athens"},
+  {t:"La primavera",ar:"Sandro Botticelli",y:1482,s:"renacimiento",w:"Primavera (Botticelli)"},
+  {t:"El matrimonio Arnolfini",ar:"Jan van Eyck",y:1434,s:"renacimiento",w:"Arnolfini Portrait"},
+  {t:"El jardín de las delicias",ar:"El Bosco",y:1505,s:"renacimiento",w:"The Garden of Earthly Delights"},
+  // Barroco
+  {t:"La ronda de noche",ar:"Rembrandt",y:1642,s:"barroco",w:"The Night Watch"},
+  {t:"La joven de la perla",ar:"Johannes Vermeer",y:1665,s:"barroco",w:"Girl with a Pearl Earring"},
+  {t:"Las meninas",ar:"Diego Velázquez",y:1656,s:"barroco",w:"Las Meninas"},
+  {t:"La vocación de san Mateo",ar:"Caravaggio",y:1600,s:"barroco",w:"The Calling of Saint Matthew"},
+  {t:"Judit decapitando a Holofernes",ar:"Artemisia Gentileschi",y:1620,s:"barroco",w:"Judith Slaying Holofernes (Artemisia Gentileschi, Florence)"},
+  {t:"La lechera",ar:"Johannes Vermeer",y:1658,s:"barroco",w:"The Milkmaid"},
+  // Rococó
+  {t:"El columpio",ar:"Jean-Honoré Fragonard",y:1767,s:"rococo",w:"The Swing (Fragonard)"},
+  {t:"El embarque para Citera",ar:"Antoine Watteau",y:1717,s:"rococo",w:"The Embarkation for Cythera"},
+  {t:"Pierrot (Gilles)",ar:"Antoine Watteau",y:1719,s:"rococo",w:"Pierrot (painting)"},
+  {t:"Retrato de Madame de Pompadour",ar:"François Boucher",y:1756,s:"rococo",w:"Madame de Pompadour (Boucher, Munich)"},
+  // Neoclasicismo
+  {t:"La muerte de Sócrates",ar:"Jacques-Louis David",y:1787,s:"neoclasicismo",w:"The Death of Socrates"},
+  {t:"El juramento de los Horacios",ar:"Jacques-Louis David",y:1784,s:"neoclasicismo",w:"Oath of the Horatii"},
+  {t:"La gran odalisca",ar:"Ingres",y:1814,s:"neoclasicismo",w:"Grande Odalisque"},
+  {t:"La muerte de Marat",ar:"Jacques-Louis David",y:1793,s:"neoclasicismo",w:"The Death of Marat"},
+  // Romanticismo
+  {t:"El caminante sobre el mar de nubes",ar:"Caspar David Friedrich",y:1818,s:"romanticismo",w:"Wanderer above the Sea of Fog"},
+  {t:"La balsa de la Medusa",ar:"Théodore Géricault",y:1819,s:"romanticismo",w:"The Raft of the Medusa"},
+  {t:"La libertad guiando al pueblo",ar:"Eugène Delacroix",y:1830,s:"romanticismo",w:"Liberty Leading the People"},
+  {t:"El último viaje del Temerario",ar:"J. M. W. Turner",y:1839,s:"romanticismo",w:"The Fighting Temeraire"},
+  {t:"Lluvia, vapor y velocidad",ar:"J. M. W. Turner",y:1844,s:"romanticismo",w:"Rain, Steam and Speed"},
+  {t:"El mar de hielo",ar:"Caspar David Friedrich",y:1824,s:"romanticismo",w:"The Sea of Ice"},
+  // Realismo
+  {t:"Las espigadoras",ar:"Jean-François Millet",y:1857,s:"realismo",w:"The Gleaners"},
+  {t:"El Ángelus",ar:"Jean-François Millet",y:1859,s:"realismo",w:"The Angelus (painting)"},
+  {t:"Entierro en Ornans",ar:"Gustave Courbet",y:1850,s:"realismo",w:"A Burial At Ornans"},
+  {t:"Los picapedreros",ar:"Gustave Courbet",y:1849,s:"realismo",w:"The Stone Breakers"},
+  // Prerrafaelitas
+  {t:"Ofelia",ar:"John Everett Millais",y:1852,s:"prerrafaelismo",w:"Ophelia (painting)"},
+  {t:"Proserpina",ar:"Dante Gabriel Rossetti",y:1874,s:"prerrafaelismo",w:"Proserpine (Rossetti painting)"},
+  {t:"El hechizo de Merlín",ar:"Edward Burne-Jones",y:1874,s:"prerrafaelismo",w:"The Beguiling of Merlin"},
+  {t:"Junio flamígero",ar:"Frederic Leighton",y:1895,s:"prerrafaelismo",w:"Flaming June"},
+  {t:"La dama de Shalott",ar:"John William Waterhouse",y:1888,s:"prerrafaelismo",w:"The Lady of Shalott (painting)"},
+  // Impresionismo
+  {t:"Impresión, sol naciente",ar:"Claude Monet",y:1872,s:"impresionismo",w:"Impression, Sunrise"},
+  {t:"Los nenúfares",ar:"Claude Monet",y:1906,s:"impresionismo",w:"Water Lilies (Monet series)"},
+  {t:"Baile en el Moulin de la Galette",ar:"Pierre-Auguste Renoir",y:1876,s:"impresionismo",w:"Bal du moulin de la Galette"},
+  {t:"El almuerzo de los remeros",ar:"Pierre-Auguste Renoir",y:1881,s:"impresionismo",w:"Luncheon of the Boating Party"},
+  {t:"La clase de danza",ar:"Edgar Degas",y:1874,s:"impresionismo",w:"The Ballet Class"},
+  {t:"La cuna",ar:"Berthe Morisot",y:1872,s:"impresionismo",w:"The Cradle (painting)"},
+  // Postimpresionismo
+  {t:"La noche estrellada",ar:"Vincent van Gogh",y:1889,s:"postimpresionismo",w:"The Starry Night"},
+  {t:"Terraza de café por la noche",ar:"Vincent van Gogh",y:1888,s:"postimpresionismo",w:"Café Terrace at Night"},
+  {t:"Los girasoles",ar:"Vincent van Gogh",y:1888,s:"postimpresionismo",w:"Sunflowers (Van Gogh series)"},
+  {t:"El monte Sainte-Victoire",ar:"Paul Cézanne",y:1904,s:"postimpresionismo",w:"Mont Sainte-Victoire (Cézanne)"},
+  {t:"¿De dónde venimos?",ar:"Paul Gauguin",y:1897,s:"postimpresionismo",w:"Where Do We Come From? What Are We? Where Are We Going?"},
+  {t:"Los jugadores de cartas",ar:"Paul Cézanne",y:1895,s:"postimpresionismo",w:"The Card Players"},
+  // Puntillismo
+  {t:"Tarde de domingo en la isla de la Grande Jatte",ar:"Georges Seurat",y:1886,s:"puntillismo",w:"A Sunday Afternoon on the Island of La Grande Jatte"},
+  {t:"Bañistas en Asnières",ar:"Georges Seurat",y:1884,s:"puntillismo",w:"Bathers at Asnières"},
+  {t:"El circo",ar:"Georges Seurat",y:1891,s:"puntillismo",w:"The Circus (Seurat)"},
+  {t:"El puerto de Saint-Tropez",ar:"Paul Signac",y:1901,s:"puntillismo",w:"Paul Signac"},
+  // Simbolismo
+  {t:"La isla de los muertos",ar:"Arnold Böcklin",y:1883,s:"simbolismo",w:"Isle of the Dead (painting)"},
+  {t:"Júpiter y Sémele",ar:"Gustave Moreau",y:1895,s:"simbolismo",w:"Jupiter and Semele"},
+  {t:"El ciclope",ar:"Odilon Redon",y:1914,s:"simbolismo",w:"The Cyclops (painting)"},
+  {t:"Vida y muerte",ar:"Gustav Klimt",y:1915,s:"simbolismo",w:"Death and Life"},
+  // Art Nouveau
+  {t:"El beso",ar:"Gustav Klimt",y:1908,s:"art_nouveau",w:"The Kiss (Klimt)"},
+  {t:"Retrato de Adele Bloch-Bauer I",ar:"Gustav Klimt",y:1907,s:"art_nouveau",w:"Portrait of Adele Bloch-Bauer I"},
+  {t:"Gismonda (afiche)",ar:"Alphonse Mucha",y:1894,s:"art_nouveau",w:"Alphonse Mucha"},
+  {t:"El árbol de la vida",ar:"Gustav Klimt",y:1909,s:"art_nouveau",w:"Stoclet Frieze"},
+  // Fauvismo
+  {t:"La danza",ar:"Henri Matisse",y:1910,s:"fauvismo",w:"The Dance (Matisse)"},
+  {t:"Mujer con sombrero",ar:"Henri Matisse",y:1905,s:"fauvismo",w:"Woman with a Hat"},
+  {t:"Ventana abierta en Collioure",ar:"Henri Matisse",y:1905,s:"fauvismo",w:"Open Window, Collioure"},
+  {t:"El taller rojo",ar:"Henri Matisse",y:1911,s:"fauvismo",w:"The Red Studio"},
+  {t:"El puente de Charing Cross",ar:"André Derain",y:1906,s:"fauvismo",w:"Charing Cross Bridge, London (Derain)"},
+  // Expresionismo
+  {t:"El grito",ar:"Edvard Munch",y:1893,s:"expresionismo",w:"The Scream"},
+  {t:"Los grandes caballos azules",ar:"Franz Marc",y:1911,s:"expresionismo",w:"The Large Blue Horses"},
+  {t:"Calle, Dresde",ar:"Ernst Ludwig Kirchner",y:1908,s:"expresionismo",w:"Street, Dresden"},
+  {t:"El destino de los animales",ar:"Franz Marc",y:1913,s:"expresionismo",w:"Fate of the Animals"},
+  {t:"El abrazo",ar:"Egon Schiele",y:1917,s:"expresionismo",w:"Egon Schiele"},
+  // Cubismo
+  {t:"Las señoritas de Aviñón",ar:"Pablo Picasso",y:1907,s:"cubismo",w:"Les Demoiselles d'Avignon"},
+  {t:"Guernica",ar:"Pablo Picasso",y:1937,s:"cubismo",w:"Guernica (Picasso)"},
+  {t:"Retrato de Ambroise Vollard",ar:"Pablo Picasso",y:1910,s:"cubismo",w:"Portrait of Ambroise Vollard (Picasso)"},
+  {t:"Desnudo bajando una escalera",ar:"Marcel Duchamp",y:1912,s:"cubismo",w:"Nude Descending a Staircase, No. 2"},
+  {t:"Violín y candelabro",ar:"Georges Braque",y:1910,s:"cubismo",w:"Violin and Candlestick"},
+  {t:"La ciudad",ar:"Fernand Léger",y:1919,s:"cubismo",w:"The City (Léger)"},
+  // Futurismo
+  {t:"Formas únicas de continuidad en el espacio",ar:"Umberto Boccioni",y:1913,s:"futurismo",w:"Unique Forms of Continuity in Space"},
+  {t:"La ciudad se levanta",ar:"Umberto Boccioni",y:1910,s:"futurismo",w:"The City Rises"},
+  {t:"Dinamismo de un perro con correa",ar:"Giacomo Balla",y:1912,s:"futurismo",w:"Dynamism of a Dog on a Leash"},
+  {t:"Velocidad abstracta + sonido",ar:"Giacomo Balla",y:1914,s:"futurismo",w:"Abstract Speed + Sound"},
+  // Dadá
+  {t:"Fuente",ar:"Marcel Duchamp",y:1917,s:"dada",w:"Fountain (Duchamp)"},
+  {t:"L.H.O.O.Q.",ar:"Marcel Duchamp",y:1919,s:"dada",w:"L.H.O.O.Q."},
+  {t:"Cortado con el cuchillo de cocina",ar:"Hannah Höch",y:1919,s:"dada",w:"Cut with the Kitchen Knife Dada Through the Last Weimar Beer-Belly Cultural Epoch"},
+  // Surrealismo
+  {t:"La persistencia de la memoria",ar:"Salvador Dalí",y:1931,s:"surrealismo",w:"The Persistence of Memory"},
+  {t:"El hijo del hombre",ar:"René Magritte",y:1964,s:"surrealismo",w:"The Son of Man"},
+  {t:"Esto no es una pipa",ar:"René Magritte",y:1929,s:"surrealismo",w:"The Treachery of Images"},
+  {t:"El carnaval del arlequín",ar:"Joan Miró",y:1925,s:"surrealismo",w:"Harlequin's Carnival"},
+  {t:"Las dos Fridas",ar:"Frida Kahlo",y:1939,s:"surrealismo",w:"The Two Fridas"},
+  {t:"La condición humana",ar:"René Magritte",y:1933,s:"surrealismo",w:"The Human Condition (Magritte)"},
+  // Metafísica
+  {t:"Misterio y melancolía de una calle",ar:"Giorgio de Chirico",y:1914,s:"metafisica",w:"Mystery and Melancholy of a Street"},
+  {t:"La canción de amor",ar:"Giorgio de Chirico",y:1914,s:"metafisica",w:"The Song of Love"},
+  {t:"Bodegón con botellas",ar:"Giorgio Morandi",y:1946,s:"metafisica",w:"Giorgio Morandi"},
+  // Neoplasticismo
+  {t:"Composición con rojo, azul y amarillo",ar:"Piet Mondrian",y:1930,s:"neoplasticismo",w:"Composition with Red Blue and Yellow"},
+  {t:"Broadway Boogie-Woogie",ar:"Piet Mondrian",y:1943,s:"neoplasticismo",w:"Broadway Boogie-Woogie"},
+  {t:"Árbol gris",ar:"Piet Mondrian",y:1911,s:"neoplasticismo",w:"The Gray Tree"},
+  {t:"Composición aritmética",ar:"Theo van Doesburg",y:1930,s:"neoplasticismo",w:"Theo van Doesburg"},
+  // Suprematismo / constructivismo
+  {t:"Cuadrado negro",ar:"Kazimir Malévich",y:1915,s:"suprematismo",w:"Black Square (painting)"},
+  {t:"Blanco sobre blanco",ar:"Kazimir Malévich",y:1918,s:"suprematismo",w:"White on White"},
+  {t:"Golpea a los blancos con la cuña roja",ar:"El Lissitzky",y:1919,s:"suprematismo",w:"Beat the Whites with the Red Wedge"},
+  {t:"Composición espacial",ar:"Liubov Popova",y:1921,s:"suprematismo",w:"Lyubov Popova"},
+  // Bauhaus
+  {t:"Composición VIII",ar:"Wassily Kandinsky",y:1923,s:"bauhaus",w:"Composition VIII (Kandinsky)"},
+  {t:"Amarillo, rojo, azul",ar:"Wassily Kandinsky",y:1925,s:"bauhaus",w:"Yellow-Red-Blue"},
+  {t:"Senecio",ar:"Paul Klee",y:1922,s:"bauhaus",w:"Senecio (Klee)"},
+  {t:"La máquina de trinar",ar:"Paul Klee",y:1922,s:"bauhaus",w:"Twittering Machine"},
+  {t:"Homenaje al cuadrado",ar:"Josef Albers",y:1965,s:"bauhaus",w:"Josef Albers"},
+  {t:"Ad Parnassum",ar:"Paul Klee",y:1932,s:"bauhaus",w:"Ad Parnassum"},
+  // Art Déco
+  {t:"Autorretrato en el Bugatti verde",ar:"Tamara de Lempicka",y:1929,s:"art_deco",w:"Tamara de Lempicka"},
+  {t:"Muchacha con guantes",ar:"Tamara de Lempicka",y:1930,s:"art_deco",w:"Young Lady with Gloves"},
+  {t:"Afiche del Normandie",ar:"A. M. Cassandre",y:1935,s:"art_deco",w:"Cassandre"},
+  {t:"Diseño de vestuario",ar:"Erté",y:1925,s:"art_deco",w:"Erté"},
+  // Realismo americano
+  {t:"Halcones de la noche",ar:"Edward Hopper",y:1942,s:"realismo_americano",w:"Nighthawks"},
+  {t:"Automat",ar:"Edward Hopper",y:1927,s:"realismo_americano",w:"Automat (painting)"},
+  {t:"Domingo temprano por la mañana",ar:"Edward Hopper",y:1930,s:"realismo_americano",w:"Early Sunday Morning"},
+  {t:"Gótico americano",ar:"Grant Wood",y:1930,s:"realismo_americano",w:"American Gothic"},
+  {t:"Cráneo de vaca: rojo, blanco y azul",ar:"Georgia O'Keeffe",y:1931,s:"realismo_americano",w:"Cow's Skull: Red, White, and Blue"},
+  {t:"El mundo de Cristina",ar:"Andrew Wyeth",y:1948,s:"realismo_americano",w:"Christina's World"},
+  // Muralismo
+  {t:"El hombre controlador del universo",ar:"Diego Rivera",y:1934,s:"muralismo",w:"Man at the Crossroads"},
+  {t:"Murales de la industria de Detroit",ar:"Diego Rivera",y:1933,s:"muralismo",w:"Detroit Industry Murals"},
+  {t:"Sueño de una tarde dominical en la Alameda",ar:"Diego Rivera",y:1947,s:"muralismo",w:"Dream of a Sunday Afternoon in Alameda Park"},
+  {t:"El hombre en llamas",ar:"José Clemente Orozco",y:1939,s:"muralismo",w:"José Clemente Orozco"},
+  // Expresionismo abstracto
+  {t:"Número 5, 1948",ar:"Jackson Pollock",y:1948,s:"expr_abstracto",w:"No. 5, 1948"},
+  {t:"Ritmo de otoño",ar:"Jackson Pollock",y:1950,s:"expr_abstracto",w:"Autumn Rhythm"},
+  {t:"Mujer I",ar:"Willem de Kooning",y:1952,s:"expr_abstracto",w:"Woman I"},
+  {t:"Postes azules",ar:"Jackson Pollock",y:1952,s:"expr_abstracto",w:"Blue Poles"},
+  {t:"Elegía a la República Española",ar:"Robert Motherwell",y:1961,s:"expr_abstracto",w:"Elegy to the Spanish Republic"},
+  {t:"Jefe",ar:"Franz Kline",y:1950,s:"expr_abstracto",w:"Franz Kline"},
+  // Color field
+  {t:"N.º 6 (violeta, verde y rojo)",ar:"Mark Rothko",y:1951,s:"color_field",w:"No. 6 (Violet, Green and Red)"},
+  {t:"Naranja, rojo, amarillo",ar:"Mark Rothko",y:1961,s:"color_field",w:"Orange, Red, Yellow"},
+  {t:"Montañas y mar",ar:"Helen Frankenthaler",y:1952,s:"color_field",w:"Mountains and Sea"},
+  {t:"Vir Heroicus Sublimis",ar:"Barnett Newman",y:1951,s:"color_field",w:"Vir Heroicus Sublimis"},
+  // Op art
+  {t:"Movimiento en cuadrados",ar:"Bridget Riley",y:1961,s:"op_art",w:"Bridget Riley"},
+  {t:"Vega",ar:"Victor Vasarely",y:1957,s:"op_art",w:"Victor Vasarely"},
+  {t:"Zebra",ar:"Bridget Riley",y:1963,s:"op_art",w:"Bridget Riley"},
+  {t:"Estructura óptica",ar:"Richard Anuszkiewicz",y:1965,s:"op_art",w:"Richard Anuszkiewicz"},
+  // Pop art
+  {t:"Latas de sopa Campbell",ar:"Andy Warhol",y:1962,s:"pop_art",w:"Campbell's Soup Cans"},
+  {t:"Díptico de Marilyn",ar:"Andy Warhol",y:1962,s:"pop_art",w:"Marilyn Diptych"},
+  {t:"Chica ahogándose",ar:"Roy Lichtenstein",y:1963,s:"pop_art",w:"Drowning Girl"},
+  {t:"¡Whaam!",ar:"Roy Lichtenstein",y:1963,s:"pop_art",w:"Whaam!"},
+  {t:"Un chapuzón mayor",ar:"David Hockney",y:1967,s:"pop_art",w:"A Bigger Splash"},
+  {t:"¿Qué es lo que hace al hogar de hoy tan distinto?",ar:"Richard Hamilton",y:1956,s:"pop_art",w:"Just What Is It That Makes Today's Home So Different, So Appealing?"},
+  // Minimalismo
+  {t:"Sin título (grilla)",ar:"Agnes Martin",y:1963,s:"minimalismo",w:"Agnes Martin"},
+  {t:"El matrimonio de la razón y la miseria",ar:"Frank Stella",y:1959,s:"minimalismo",w:"The Marriage of Reason and Squalor, II"},
+  {t:"Colores para un muro grande",ar:"Ellsworth Kelly",y:1951,s:"minimalismo",w:"Ellsworth Kelly"},
+  {t:"Pintura blanca",ar:"Robert Ryman",y:1965,s:"minimalismo",w:"Robert Ryman"},
+  // Cinético
+  {t:"Fisicromía",ar:"Carlos Cruz-Diez",y:1965,s:"cinetico",w:"Carlos Cruz-Diez"},
+  {t:"Penetrable",ar:"Jesús Rafael Soto",y:1969,s:"cinetico",w:"Jesús Rafael Soto"},
+  {t:"Continuel-lumière",ar:"Julio Le Parc",y:1966,s:"cinetico",w:"Julio Le Parc"},
+  {t:"Bicho",ar:"Lygia Clark",y:1960,s:"cinetico",w:"Lygia Clark"},
+  // Concreto y Madí
+  {t:"Desarrollo de un tema",ar:"Tomás Maldonado",y:1948,s:"concreto_madi",w:"Tomás Maldonado"},
+  {t:"Röyi",ar:"Gyula Kosice",y:1944,s:"concreto_madi",w:"Gyula Kosice"},
+  {t:"Relieve plano",ar:"Raúl Lozza",y:1947,s:"concreto_madi",w:"Raúl Lozza"},
+  {t:"Constructivo",ar:"Joaquín Torres-García",y:1931,s:"concreto_madi",w:"Joaquín Torres-García"},
+  {t:"Concreto n.º 5",ar:"Lidy Prati",y:1948,s:"concreto_madi",w:"Lidy Prati"},
+  // Modernos argentinos
+  {t:"Manifestación",ar:"Antonio Berni",y:1934,s:"arg_moderno",w:"Antonio Berni"},
+  {t:"Juanito Laguna",ar:"Antonio Berni",y:1961,s:"arg_moderno",w:"Juanito Laguna"},
+  {t:"Barcos en el Riachuelo",ar:"Benito Quinquela Martín",y:1930,s:"arg_moderno",w:"Benito Quinquela Martín"},
+  {t:"Pareja",ar:"Xul Solar",y:1923,s:"arg_moderno",w:"Xul Solar"},
+  {t:"El quinteto",ar:"Emilio Pettoruti",y:1927,s:"arg_moderno",w:"Emilio Pettoruti"},
+  {t:"Los espantapájaros",ar:"Raquel Forner",y:1942,s:"arg_moderno",w:"Raquel Forner"},
+  {t:"Figura",ar:"Lino Enea Spilimbergo",y:1935,s:"arg_moderno",w:"Lino Enea Spilimbergo"},
+  // Hiperrealismo
+  {t:"Big Self-Portrait",ar:"Chuck Close",y:1968,s:"hiperrealismo",w:"Chuck Close"},
+  {t:"Escaparate",ar:"Richard Estes",y:1970,s:"hiperrealismo",w:"Richard Estes"},
+  {t:"Marilyn (Vanitas)",ar:"Audrey Flack",y:1977,s:"hiperrealismo",w:"Audrey Flack"},
+  {t:"Retrato hiperrealista",ar:"Gerhard Richter",y:1965,s:"hiperrealismo",w:"Gerhard Richter"},
+  // Ukiyo-e
+  {t:"La gran ola de Kanagawa",ar:"Katsushika Hokusai",y:1831,s:"ukiyoe",w:"The Great Wave off Kanagawa"},
+  {t:"Fuji rojo",ar:"Katsushika Hokusai",y:1831,s:"ukiyoe",w:"Fine Wind, Clear Morning"},
+  {t:"Lluvia repentina sobre el puente Shin-Ōhashi",ar:"Utagawa Hiroshige",y:1857,s:"ukiyoe",w:"Sudden Shower over Shin-Ōhashi Bridge and Atake"},
+  {t:"El jardín de ciruelos de Kameido",ar:"Utagawa Hiroshige",y:1857,s:"ukiyoe",w:"Plum Park in Kameido"},
+  {t:"Tres bellezas de la época",ar:"Kitagawa Utamaro",y:1793,s:"ukiyoe",w:"Kitagawa Utamaro"},
+  {t:"El actor Ōtani Oniji III",ar:"Tōshūsai Sharaku",y:1794,s:"ukiyoe",w:"Sharaku"},
+  // Tinta china
+  {t:"Viajeros entre montañas y arroyos",ar:"Fan Kuan",y:1000,s:"tinta_china",w:"Travelers Among Mountains and Streams"},
+  {t:"Primavera temprana",ar:"Guo Xi",y:1072,s:"tinta_china",w:"Early Spring (painting)"},
+  {t:"Seis caquis",ar:"Muqi",y:1250,s:"tinta_china",w:"Six Persimmons"},
+  {t:"A lo largo del río durante el festival Qingming",ar:"Zhang Zeduan",y:1120,s:"tinta_china",w:"Along the River During the Qingming Festival"},
+  // Miniatura persa
+  {t:"Escena del Shahnameh",ar:"Taller de Behzad",y:1490,s:"miniatura_persa",w:"Kamāl ud-Dīn Behzād"},
+  {t:"Lámina del Hamzanama",ar:"Taller mogol",y:1570,s:"miniatura_persa",w:"Hamzanama"},
+  {t:"Página del Shahnameh de Shah Tahmasp",ar:"Sultan Muhammad",y:1530,s:"miniatura_persa",w:"Shahnameh of Shah Tahmasp"},
+  // Geometría islámica
+  {t:"Patrón girih",ar:"Anónimo",y:1200,s:"geometria_islamica",w:"Girih"},
+  {t:"Zellij de Fez",ar:"Anónimo",y:1400,s:"geometria_islamica",w:"Zellij"},
+  {t:"Bóveda de mocárabes",ar:"Anónimo",y:1350,s:"geometria_islamica",w:"Muqarnas"},
+  // Iconos
+  {t:"La Trinidad",ar:"Andréi Rubliov",y:1425,s:"iconos",w:"Trinity (Andrei Rublev)"},
+  {t:"Virgen de Vladímir",ar:"Anónimo",y:1130,s:"iconos",w:"Theotokos of Vladimir"},
+  {t:"Cristo Pantocrátor del Sinaí",ar:"Anónimo",y:550,s:"iconos",w:"Christ Pantocrator (Sinai)"},
+  {t:"Mosaico de la Deesis",ar:"Anónimo",y:1261,s:"iconos",w:"Deesis mosaic (Hagia Sophia)"},
+  // Ilustración natural
+  {t:"Rosas",ar:"Pierre-Joseph Redouté",y:1820,s:"botanica",w:"Pierre-Joseph Redouté"},
+  {t:"Las aves de América",ar:"John James Audubon",y:1838,s:"botanica",w:"The Birds of America"},
+  {t:"Metamorfosis de los insectos de Surinam",ar:"Maria Sibylla Merian",y:1705,s:"botanica",w:"Metamorphosis Insectorum Surinamensium"},
+  {t:"Formas artísticas de la naturaleza",ar:"Ernst Haeckel",y:1904,s:"botanica",w:"Kunstformen der Natur"},
+  // Cartografía
+  {t:"Theatrum Orbis Terrarum",ar:"Abraham Ortelius",y:1570,s:"cartografia",w:"Theatrum Orbis Terrarum"},
+  {t:"Mapa de Waldseemüller",ar:"Martin Waldseemüller",y:1507,s:"cartografia",w:"Waldseemüller map"},
+  {t:"Mapa de Fra Mauro",ar:"Fra Mauro",y:1459,s:"cartografia",w:"Fra Mauro map"},
+  {t:"Atlas Maior",ar:"Joan Blaeu",y:1662,s:"cartografia",w:"Atlas Maior"},
+  // Fotografía
+  {t:"Madre migrante",ar:"Dorothea Lange",y:1936,s:"fotografia",w:"Migrant Mother"},
+  {t:"La tercera clase",ar:"Alfred Stieglitz",y:1907,s:"fotografia",w:"The Steerage"},
+  {t:"Estanque a la luz de la luna",ar:"Edward Steichen",y:1904,s:"fotografia",w:"The Pond—Moonlight"},
+  {t:"El valle de Yosemite",ar:"Ansel Adams",y:1934,s:"fotografia",w:"Ansel Adams"},
+  // Naíf
+  {t:"La gitana dormida",ar:"Henri Rousseau",y:1897,s:"naif",w:"The Sleeping Gypsy"},
+  {t:"El sueño",ar:"Henri Rousseau",y:1910,s:"naif",w:"The Dream (Rousseau)"},
+  {t:"Tigre en una tormenta tropical",ar:"Henri Rousseau",y:1891,s:"naif",w:"Tiger in a Tropical Storm"},
+  {t:"Escena de invierno",ar:"Grandma Moses",y:1944,s:"naif",w:"Grandma Moses"},
+  // Arte urbano
+  {t:"Sin título (calavera)",ar:"Jean-Michel Basquiat",y:1981,s:"street_art",w:"Untitled (Skull)"},
+  {t:"Radiant Baby",ar:"Keith Haring",y:1982,s:"street_art",w:"Keith Haring"},
+  {t:"Nena con globo",ar:"Banksy",y:2002,s:"street_art",w:"Girl with Balloon"},
+  {t:"Mural de gran escala",ar:"Blu",y:2010,s:"street_art",w:"Blu (artist)"},
+  // Abstracción contemporánea
+  {t:"Abstraktes Bild",ar:"Gerhard Richter",y:1990,s:"abstraccion_contemp",w:"Abstraktes Bild"},
+  {t:"La Grande Vallée",ar:"Joan Mitchell",y:1983,s:"abstraccion_contemp",w:"Joan Mitchell"},
+  {t:"Leda y el cisne",ar:"Cy Twombly",y:1962,s:"abstraccion_contemp",w:"Leda and the Swan (Twombly)"},
+  {t:"Stadia II",ar:"Julie Mehretu",y:2004,s:"abstraccion_contemp",w:"Julie Mehretu"},
+  // Paisaje épico americano
+  {t:"El meandro",ar:"Thomas Cole",y:1836,s:"paisaje_americano",w:"The Oxbow"},
+  {t:"Entre la Sierra Nevada, California",ar:"Albert Bierstadt",y:1868,s:"paisaje_americano",w:"Among the Sierra Nevada, California"},
+  {t:"El corazón de los Andes",ar:"Frederic Edwin Church",y:1859,s:"paisaje_americano",w:"The Heart of the Andes"},
+  {t:"Niágara",ar:"Frederic Edwin Church",y:1857,s:"paisaje_americano",w:"Niagara (Church)"},
+  // Bodegón
+  {t:"Cesta de frutas",ar:"Caravaggio",y:1599,s:"bodegon",w:"Basket of Fruit (Caravaggio)"},
+  {t:"Bodegón con limones y naranjas",ar:"Francisco de Zurbarán",y:1633,s:"bodegon",w:"Still Life with Lemons, Oranges and a Rose"},
+  {t:"La raya",ar:"Jean-Baptiste-Siméon Chardin",y:1728,s:"bodegon",w:"The Ray (Chardin)"},
+  {t:"Bodegón con botellas y jarra",ar:"Giorgio Morandi",y:1950,s:"bodegon",w:"Giorgio Morandi"},
+  // Shin-hanga
+  {t:"Lluvia en el santuario",ar:"Kawase Hasui",y:1929,s:"shin_hanga",w:"Kawase Hasui"},
+  {t:"El Fuji desde el lago Kawaguchi",ar:"Hiroshi Yoshida",y:1930,s:"shin_hanga",w:"Hiroshi Yoshida"},
+  {t:"Pájaros y flores",ar:"Ohara Koson",y:1925,s:"shin_hanga",w:"Ohara Koson"},
+  {t:"Belleza moderna",ar:"Itō Shinsui",y:1922,s:"shin_hanga",w:"Itō Shinsui"},
+  // Generativo
+  {t:"Interruptions",ar:"Vera Molnár",y:1969,s:"generativo",w:"Vera Molnár"},
+  {t:"P-196",ar:"Manfred Mohr",y:1977,s:"generativo",w:"Manfred Mohr"},
+  {t:"Process series",ar:"Casey Reas",y:2005,s:"generativo",w:"Casey Reas"},
+  {t:"Machine Hallucinations",ar:"Refik Anadol",y:2019,s:"generativo",w:"Refik Anadol"}
+];
+
+OBRAS.forEach((o,i)=>{ o.id="o"+i; o.q=(o.t+" "+o.ar+" painting").replace(/\s+/g," "); });
+const SALA_BY_ID = {}; SALAS.forEach(s=>SALA_BY_ID[s.id]=s);
+
+/* ================= resolución de imágenes =================
+   Fuentes: Wikipedia EN (imagen principal del artículo de la obra)
+            Wikimedia Commons (archivos por artista, cuando no hay artículo de la obra)
+   Todo con origin=* (CORS abierto), sin claves ni proxy. */
+
+const W_API="https://en.wikipedia.org/w/api.php";
+const C_API="https://commons.wikimedia.org/w/api.php";
+
+function px(url,n){ return url ? url.replace(/\/(\d+)px-/,"/"+n+"px-") : url; }
+function sinAcentos(s){ return (s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function pagW(t){ return "https://en.wikipedia.org/wiki/"+encodeURIComponent(t.replace(/ /g,"_")); }
+function pagC(t){ return "https://commons.wikimedia.org/wiki/"+encodeURIComponent(t.replace(/ /g,"_")); }
+
+async function api(base,p,intentos){
+  intentos=intentos||3;
+  const u=new URL(base);
+  Object.entries(Object.assign({format:"json",formatversion:"2",origin:"*"},p)).forEach(([k,v])=>u.searchParams.set(k,v));
+  let err;
+  for(let i=0;i<intentos;i++){
+    try{
+      const r=await fetch(u.toString());
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){ err=e; if(i<intentos-1) await espera(400*(i+1)+Math.random()*300); }
+  }
+  throw err;
+}
+
+/* ¿el título de referencia es sólo el nombre del artista?
+   En ese caso la imagen principal del artículo puede ser un retrato fotográfico:
+   conviene ir directo a Commons y traer obra suya. */
+(function marcar(){
+  OBRAS.forEach(o=>{
+    const w=sinAcentos(o.w).replace(/\([^)]*\)/g," ").replace(/[^a-z0-9\s-]/g," ").trim();
+    const ar=sinAcentos(o.ar);
+    const tk=w.split(/\s+/).filter(t=>t.length>=3);
+    const ult=tk[tk.length-1];
+    o.fa = (w.length>2 && ar.includes(w)) || (tk.length<=2 && ult && ult.length>=4 && ar.includes(ult));
+  });
+})();
+
+const USADAS=new Set();
+const NO_SIRVE=/(portrait of|photograph|photo of|signature|grave|tomb|plaque|memorial|stamp|coin|logo|building|exterior|street|museum of|bust of|statue|map of the|\.svg|\.pdf|\.ogv|\.ogg|\.webm|\.djvu)/i;
+const ES_IMG=/\.(jpe?g|png|tiff?|gif)$/i;
+
+function asignar(o,img,url){
+  if(!img||USADAS.has(img)) return false;
+  USADAS.add(img); o.img=img; o.url=url; return true;
+}
+
+/* espera simple, para no golpear las APIs en ráfaga */
+function espera(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+/* reintento a nivel <img>: la búsqueda del dato puede salir bien
+   y aun así la descarga de la foto en sí fallar una vez. Reintenta
+   con backoff y a la tercera falla la esconde en vez de mostrar
+   el ícono roto del navegador. */
+function reintentarImg(im){
+  const n=(parseInt(im.dataset.intento||"0",10))+1;
+  if(n>3){ im.style.visibility="hidden"; return; }
+  im.dataset.intento=String(n);
+  const base=im.dataset.base||im.src.split("?")[0];
+  im.dataset.base=base;
+  setTimeout(()=>{ im.src=base+"?r="+n+"-"+Date.now(); },500*n+Math.random()*300);
+}
+
+/* caché local: lo que ya se resolvió una vez no se vuelve a pedir */
+const CACHE_KEY="arte-img-cache.v2";
+function claveImg(o){ return (o.w||"")+"‖"+(o.ar||""); }
+function leerCache(){ try{ return JSON.parse(localStorage.getItem(CACHE_KEY))||{}; }catch(e){ return {}; } }
+function guardarCache(mapa){ try{ localStorage.setItem(CACHE_KEY,JSON.stringify(mapa)); }catch(e){} }
+function aplicarCache(lista){
+  const c=leerCache();
+  lista.forEach(o=>{ const h=c[claveImg(o)]; if(h&&h.img) asignar(o,h.img,h.url); });
+}
+function guardarEnCache(lista){
+  const c=leerCache();
+  lista.forEach(o=>{ if(o.img) c[claveImg(o)]={img:o.img,url:o.url}; });
+  guardarCache(c);
+}
+
+/* --- 1. artículo de Wikipedia de la obra, en lotes de 40 --- */
+async function porTitulo(lote){
+  const d=await api(W_API,{action:"query",redirects:"1",prop:"pageimages",piprop:"thumbnail",
+    pithumbsize:"1500",pilimit:"50",titles:lote.map(o=>o.w).join("|")});
+  const q=d.query||{},mapa={},pags={};
+  (q.normalized||[]).forEach(x=>mapa[x.from]=x.to);
+  (q.redirects||[]).forEach(x=>mapa[x.from]=x.to);
+  (q.pages||[]).forEach(p=>pags[p.title]=p);
+  lote.forEach(o=>{
+    let t=o.w,g=0; while(mapa[t]&&g++<6) t=mapa[t];
+    const p=pags[t];
+    if(p&&p.thumbnail&&p.thumbnail.source) asignar(o,p.thumbnail.source,pagW(t));
+  });
+}
+
+/* --- 2. archivos en Commons buscando por artista y obra --- */
+async function porCommons(o,consulta){
+  try{
+    const d=await api(C_API,{action:"query",generator:"search",gsrsearch:consulta,gsrnamespace:"6",
+      gsrlimit:"14",prop:"imageinfo",iiprop:"url",iiurlwidth:"1500"});
+    const ps=((d.query||{}).pages||[]).slice().sort((a,b)=>(a.index||99)-(b.index||99));
+    for(const p of ps){
+      if(!ES_IMG.test(p.title)||NO_SIRVE.test(p.title)) continue;
+      const ii=(p.imageinfo||[])[0]; if(!ii) continue;
+      if(asignar(o,ii.thumburl||ii.url,pagC(p.title))) return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+/* --- 3. último recurso: búsqueda en Wikipedia --- */
+async function porBusqueda(o){
+  try{
+    const d=await api(W_API,{action:"query",generator:"search",gsrsearch:o.q,gsrlimit:"5",gsrnamespace:"0",
+      prop:"pageimages",piprop:"thumbnail",pithumbsize:"1500",pilimit:"10"});
+    const ps=((d.query||{}).pages||[]).slice().sort((a,b)=>(a.index||99)-(b.index||99));
+    for(const p of ps){
+      if(p.thumbnail&&p.thumbnail.source&&asignar(o,p.thumbnail.source,pagW(p.title))) return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+async function enCola(items,n,fn){
+  let i=0;
+  await Promise.all(Array.from({length:n},async()=>{ while(i<items.length) await fn(items[i++]); }));
+}
+
+async function resolver(paso){
+  paso=paso||function(){};
+  aplicarCache(OBRAS);
+  paso();
+  // 1) artículos de obra, en lotes grandes (rápido y liviano)
+  const conArticulo=OBRAS.filter(o=>!o.fa&&!o.img);
+  const lotes=[]; for(let i=0;i<conArticulo.length;i+=40) lotes.push(conArticulo.slice(i,i+40));
+  for(const l of lotes){ try{ await porTitulo(l); }catch(e){} paso(); await espera(120); }
+  // 2) el artículo no existía: buscar la obra por nombre en Wikipedia, de a poco
+  await enCola(OBRAS.filter(o=>!o.fa&&!o.img),3,async o=>{ await porBusqueda(o); paso(); await espera(150); });
+  // 3) Commons por artista, de a una por artista para no repetir la misma imagen
+  const porArtista={};
+  OBRAS.filter(o=>!o.img).forEach(o=>{ (porArtista[o.ar]=porArtista[o.ar]||[]).push(o); });
+  await enCola(Object.values(porArtista),2,async grupo=>{
+    for(const o of grupo){
+      if(o.img) continue;
+      await porCommons(o,o.ar+" "+((SALA_BY_ID[o.s]||{}).n||""));
+      if(!o.img) await porCommons(o,o.ar);
+      paso();
+      await espera(150);
+    }
+  });
+  guardarEnCache(OBRAS);
+  return OBRAS.filter(o=>o.img);
+}
+
+
+/* ============ estado ============ */
+const K="duelo.v1";
+let S=null;
+const OBRA={}; OBRAS.forEach(o=>OBRA[o.id]=o);
+function guardar(){ try{ localStorage.setItem(K,JSON.stringify(S)); }catch(e){} }
+function cargar(){ try{ return JSON.parse(localStorage.getItem(K)); }catch(e){ return null; } }
+function borrar(){ try{ localStorage.removeItem(K); }catch(e){} }
+
+function mezclar(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* ============ portada ============ */
+let disponibles=[], largoElegido=200;
+const opciones=[{n:"Corto · 60 obras",v:60},{n:"Medio · 120 obras",v:120},{n:"Completo · 200 obras",v:200}];
+const cajaLargo=document.getElementById("largo");
+opciones.forEach(o=>{
+  const b=document.createElement("button");
+  b.textContent=o.n; b.dataset.v=o.v; b.setAttribute("aria-pressed",o.v===largoElegido);
+  b.onclick=()=>{ largoElegido=o.v; [...cajaLargo.children].forEach(c=>c.setAttribute("aria-pressed",+c.dataset.v===o.v)); };
+  cajaLargo.appendChild(b);
+});
+
+const carga=document.getElementById("carga"), btnEmpezar=document.getElementById("empezar");
+const btnReintentar=document.createElement("button");
+btnReintentar.textContent="Reintentar imágenes faltantes";
+btnReintentar.className="empezar";
+btnReintentar.style.cssText="background:transparent;border:1px solid var(--tiza-2,#8a8478);margin-top:10px";
+btnReintentar.hidden=true;
+btnEmpezar.insertAdjacentElement("afterend",btnReintentar);
+
+function correrResolver(){
+  btnReintentar.hidden=true;
+  return resolver(()=>{
+    const k=OBRAS.filter(o=>o.img).length;
+    carga.textContent="Cargando obras… "+k+" de "+OBRAS.length;
+  }).then(()=>{
+    disponibles=OBRAS.filter(o=>o.img);
+    if(disponibles.length<OBRAS.length){
+      carga.textContent=disponibles.length+" de "+OBRAS.length+" obras listas, de "+SALAS.length+" estilos distintos. Podés reintentar las que faltan o arrancar igual.";
+      btnReintentar.hidden=false;
+    }else{
+      carga.textContent=disponibles.length+" obras listas, de "+SALAS.length+" estilos distintos.";
+    }
+    btnEmpezar.disabled=false;
+    const g=cargar();
+    if(g&&g.orden&&g.i<g.orden.length&&g.orden.every(id=>OBRA[id]&&OBRA[id].img)){
+      btnEmpezar.textContent="Seguir desde la ronda "+(g.i)+" de "+(g.orden.length-1);
+      btnEmpezar.dataset.retomar="1";
+    }
+  }).catch(()=>{
+    carga.textContent="Hubo un problema de conexión. Reintentá cuando quieras.";
+    btnReintentar.hidden=false;
+  });
+}
+btnReintentar.onclick=correrResolver;
+correrResolver();
+
+btnEmpezar.onclick=()=>{
+  if(btnEmpezar.dataset.retomar==="1"){ S=cargar(); }
+  else{
+    const pool=mezclar(disponibles.slice()).slice(0,Math.min(largoElegido,disponibles.length));
+    S={orden:pool.map(o=>o.id),i:1,rey:pool[0].id,reinado:0,st:{}};
+    pool.forEach(o=>S.st[o.id]={ap:0,w:0,max:0});
+  }
+  guardar(); irAJuego();
+};
+
+/* ============ juego ============ */
+const $=id=>document.getElementById(id);
+let stack = (window.matchMedia ? window.matchMedia("(max-width:760px)").matches : window.innerWidth<760);
+let elegido=null;
+
+function irAJuego(){
+  $("portada").classList.add("oculto"); $("resultados").classList.add("oculto");
+  $("juego").classList.remove("oculto"); document.body.classList.add("jugando");
+  $("duelo").classList.toggle("stack",stack);
+  pintar();
+}
+$("btnLayout").onclick=()=>{ stack=!stack; $("duelo").classList.toggle("stack",stack); };
+
+function total(){ return S.orden.length-1; }
+
+function pintar(){
+  const rey=OBRA[S.rey], des=OBRA[S.orden[S.i]];
+  if(!des){ return terminar(); }
+  elegido=null;
+  $("rN").textContent=S.i; $("rT").textContent=total();
+  $("prog").style.width=((S.i-1)/total()*100).toFixed(1)+"%";
+
+  // el rey siempre a la izquierda / arriba
+  ponerLado("A",rey,true);
+  ponerLado("B",des,false);
+  $("ladoA").dataset.sel="0"; $("ladoB").dataset.sel="0";
+  const s=$("seguir"); s.disabled=true; s.textContent="Tocá la que te guste más";
+  precargar();
+}
+function ponerLado(l,o,esRey){
+  const im=$("img"+l);
+  im.classList.remove("fade");
+  im.style.visibility="";
+  delete im.dataset.intento; delete im.dataset.base;
+  im.onerror=()=>reintentarImg(im);
+  im.src=px(o.img,1100); im.alt="Obra sin identificar";
+  void im.offsetWidth; im.classList.add("fade");
+  $("ficha"+l).innerHTML='<p class="t esperando">'+(esRey?"Tu favorita actual":"Nueva propuesta")+'</p>';
+  const c=$("corona"+l);
+  if(esRey&&S.reinado>0){ c.classList.remove("oculto"); $("rein"+l).textContent=S.reinado; }
+  else c.classList.add("oculto");
+  $("lado"+l).dataset.obra=o.id;
+}
+function revelar(){
+  ["A","B"].forEach(l=>{
+    const o=OBRA[$("lado"+l).dataset.obra];
+    const sala=SALA_BY_ID[o.s]||{n:""};
+    $("ficha"+l).innerHTML='<p class="t">'+o.t+'</p><p class="m">'+o.ar+", "+o.y+" — "+sala.n+'</p>';
+    $("img"+l).alt=o.t+", "+o.ar;
+  });
+}
+document.querySelectorAll(".pick").forEach(b=>{
+  b.onclick=()=>elegir(b.dataset.lado);
+});
+function elegir(l){
+  elegido=l;
+  $("ladoA").dataset.sel = l==="A"?"1":"0";
+  $("ladoB").dataset.sel = l==="B"?"1":"0";
+  revelar();
+  const s=$("seguir"); s.disabled=false; s.textContent="Continuar";
+}
+$("seguir").onclick=()=>{
+  if(!elegido) return;
+  const idA=$("ladoA").dataset.obra, idB=$("ladoB").dataset.obra;
+  const gana = elegido==="A"?idA:idB;
+  S.st[idA].ap=(S.st[idA].ap||0)+1;
+  S.st[idB].ap=(S.st[idB].ap||0)+1;
+  S.st[gana].w=(S.st[gana].w||0)+1;
+  if(gana===S.rey){ S.reinado++; }
+  else{ S.rey=gana; S.reinado=1; }
+  S.st[S.rey].max=Math.max(S.st[S.rey].max||0,S.reinado);
+  S.i++;
+  guardar();
+  if(S.i>=S.orden.length) terminar(); else pintar();
+};
+document.addEventListener("keydown",e=>{
+  if($("juego").classList.contains("oculto")) return;
+  if(e.key==="ArrowLeft"||e.key==="ArrowUp") elegir("A");
+  else if(e.key==="ArrowRight"||e.key==="ArrowDown") elegir("B");
+  else if(e.key==="Enter"||e.key===" "){ e.preventDefault(); if(elegido) $("seguir").click(); }
+});
+function precargar(){
+  for(let k=1;k<=3;k++){
+    const id=S.orden[S.i+k]; if(!id) break;
+    const o=OBRA[id]; if(o&&o.img){ const im=new Image(); im.src=px(o.img,1100); }
+  }
+}
+$("btnRes").onclick=()=>terminar(true);
+
+/* ============ resultados ============ */
+function analizar(){
+  const jugadas=S.i-1;
+  const porEstilo={}, porArtista={}, porGrupo={};
+  S.orden.slice(0,Math.max(1,S.i)).forEach(id=>{
+    const o=OBRA[id], st=S.st[id]||{ap:0,w:0,max:0};
+    const s=SALA_BY_ID[o.s]||{n:o.s,g:"—"};
+    const e=porEstilo[o.s]||(porEstilo[o.s]={id:o.s,n:s.n,g:s.g,ap:0,w:0,obras:0});
+    e.ap+=st.ap; e.w+=st.w; e.obras++;
+    porArtista[o.ar]=(porArtista[o.ar]||0)+st.w;
+    porGrupo[s.g]=(porGrupo[s.g]||0)+st.w;
+  });
+  const estilos=Object.values(porEstilo).filter(e=>e.ap>0)
+    .map(e=>Object.assign(e,{tasa:e.w/e.ap}))
+    .sort((a,b)=>b.w-a.w||b.tasa-a.tasa);
+  const artistas=Object.entries(porArtista).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const grupos=Object.entries(porGrupo).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  const reinados=S.orden.slice(0,Math.max(1,S.i))
+    .map(id=>({o:OBRA[id],max:(S.st[id]||{}).max||0}))
+    .filter(x=>x.max>0).sort((a,b)=>b.max-a.max).slice(0,6);
+  const rechazados=Object.values(porEstilo).filter(e=>e.ap>=3&&e.w===0).map(e=>e.n);
+  return {jugadas,estilos,artistas,grupos,reinados,rechazados,ganadora:OBRA[S.rey]};
+}
+function terminar(parcial){
+  if(parcial&&S.i<5){
+    const s=$("seguir");
+    const prev=s.textContent;
+    s.textContent="Elegí unas cuantas más y te muestro el perfil";
+    setTimeout(()=>{ s.textContent=prev; },2200);
+    return;
+  }
+  const a=analizar();
+  const R=$("resultados");
+  const maxW=Math.max(1,...a.estilos.map(e=>e.w));
+  const top=a.estilos.slice(0,3);
+  R.innerHTML=`
+    <h1>${parcial?"Cómo viene tu gusto":"Tu gusto, medido"}</h1>
+    <p>${parcial?"Vas por la ronda "+S.i+" de "+total()+". Esto es lo que se ve hasta acá.":
+      "Terminaste las "+total()+" comparaciones. Lo que sigue sale de tus propias elecciones, no de una recomendación general."}</p>
+
+    <h2>La que quedó en la pared</h2>
+    <div class="podio">
+      ${a.reinados.map((x,i)=>`<figure>
+        <div class="cuadro"><img src="${px(x.o.img,600)}" alt="${x.o.t}" onerror="reintentarImg(this)"></div>
+        <figcaption><b>${x.o.t}</b>${x.o.ar}, ${x.o.y}<br>${(SALA_BY_ID[x.o.s]||{}).n} — aguantó ${x.max} ronda${x.max===1?"":"s"}</figcaption>
+      </figure>`).join("")}
+    </div>
+    <p style="margin-top:16px">Cuantas más rondas aguantó una obra, más fuerte fue tu preferencia. Ese número es la señal más confiable de todas.</p>
+
+    <h2>Estilos por rondas ganadas</h2>
+    <div class="rank">
+      ${a.estilos.slice(0,14).map(e=>`<div class="fila">
+        <div class="n">${e.n}<small>${e.g} — ganó ${e.w} de ${e.ap} duelo${e.ap===1?"":"s"}</small></div>
+        <div class="v">${Math.round(e.tasa*100)}%</div>
+        <div class="barra"><i style="width:${(e.w/maxW*100).toFixed(1)}%"></i></div>
+      </div>`).join("")}
+    </div>
+
+    <h2>Artistas que más elegiste</h2>
+    <div class="rank">
+      ${a.artistas.map(([nm,v])=>`<div class="fila"><div class="n">${nm}</div><div class="v">${v}</div></div>`).join("")}
+    </div>
+
+    <h2>Por época</h2>
+    <div class="rank">
+      ${a.grupos.map(([g,v])=>`<div class="fila"><div class="n">${g}</div><div class="v">${v}</div>
+        <div class="barra"><i style="width:${(v/Math.max(1,a.grupos[0][1])*100).toFixed(1)}%"></i></div></div>`).join("")}
+    </div>
+
+    <h2>Qué comprar con esto</h2>
+    ${top.map(e=>{
+      const s=SALA_BY_ID[e.id];
+      return `<div class="bloque"><h3>${s.n}</h3><p class="aa">${s.a}. ${s.art.slice(0,4).join(", ")}</p><p>${s.comprar}</p></div>`;
+    }).join("")}
+    ${a.rechazados.length?`<p style="margin-top:18px">Descartá sin culpa: ${a.rechazados.slice(0,6).join(", ")}. Perdieron todos los duelos en que aparecieron.</p>`:""}
+
+    <div class="acciones">
+      ${parcial?'<button class="pri" id="volverJuego">Seguir eligiendo</button>':""}
+      <button id="bajar">Descargar el informe</button>
+      <button id="copiarR">Copiar</button>
+      <button id="reiniciar">Empezar de nuevo</button>
+    </div>`;
+  $("juego").classList.add("oculto"); $("portada").classList.add("oculto");
+  R.classList.remove("oculto"); document.body.classList.remove("jugando");
+  window.scrollTo(0,0);
+
+  if(parcial) $("volverJuego").onclick=irAJuego;
+  $("bajar").onclick=()=>{
+    const b=new Blob([informe(a,parcial)],{type:"text/plain;charset=utf-8"});
+    const el=document.createElement("a");
+    el.href=URL.createObjectURL(b); el.download="mi-gusto-de-arte.txt"; el.click();
+    setTimeout(()=>URL.revokeObjectURL(el.href),2000);
+  };
+  $("copiarR").onclick=async()=>{
+    const btn=$("copiarR");
+    try{ await navigator.clipboard.writeText(informe(a,parcial)); btn.textContent="Copiado"; }
+    catch(e){ btn.textContent="No se pudo copiar"; }
+    setTimeout(()=>btn.textContent="Copiar",1800);
+  };
+  $("reiniciar").onclick=()=>{ borrar(); location.reload(); };
+}
+function informe(a,parcial){
+  let t="MI GUSTO DE ARTE\n"+(parcial?"Parcial, ronda "+S.i+" de "+total():"Completo, "+total()+" comparaciones")+"\n\n";
+  t+="OBRAS QUE MÁS AGUANTARON\n";
+  a.reinados.forEach(x=>{ t+="• "+x.o.t+" — "+x.o.ar+", "+x.o.y+" ("+(SALA_BY_ID[x.o.s]||{}).n+"): "+x.max+" rondas\n"+(x.o.url?"  "+x.o.url+"\n":""); });
+  t+="\nESTILOS POR RONDAS GANADAS\n";
+  a.estilos.slice(0,14).forEach((e,i)=>{ t+=(i+1)+". "+e.n+" — "+e.w+" de "+e.ap+" duelos ("+Math.round(e.tasa*100)+"%)\n"; });
+  t+="\nARTISTAS MÁS ELEGIDOS\n";
+  a.artistas.forEach(([nm,v])=>{ t+="• "+nm+": "+v+"\n"; });
+  t+="\nQUÉ BUSCAR\n";
+  a.estilos.slice(0,3).forEach(e=>{
+    const s=SALA_BY_ID[e.id];
+    t+="\n"+s.n+" ("+s.a+")\n"+s.comprar+"\nArtistas: "+s.art.join(", ")+"\n";
+  });
+  if(a.rechazados.length) t+="\nPARA DESCARTAR: "+a.rechazados.join(", ")+"\n";
+  return t;
+}
+</script>
+</body>
+</html>
